@@ -19,10 +19,10 @@ package com.duckduckgo.app.fire.promo
 import com.duckduckgo.app.fire.promo.FireTabsPromos.Companion.FIRE_TABS_PROMO_MESSAGE_ID
 import com.duckduckgo.app.fire.store.FireDataStore
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.remote.messaging.api.RemoteMessageModel
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
@@ -46,22 +46,23 @@ class RealFireTabsPromos @Inject constructor(
     private val dispatchers: DispatcherProvider,
 ) : FireTabsPromos {
 
-    override suspend fun canShowTabSwitcherPromo(): Boolean = withContext(dispatchers.io()) {
-        !fireDataStore.isTabSwitcherPromoDismissed()
+    @OnIo
+    override suspend fun canShowTabSwitcherPromo(): Boolean {
+        return !fireDataStore.isTabSwitcherPromoDismissed()
     }
 
+    @OnIo
     override suspend fun onTabSwitcherPromoShown() {
-        withContext(dispatchers.io()) { fireDataStore.setTabSwitcherPromoDismissed(true) }
+        fireDataStore.setTabSwitcherPromoDismissed(true)
     }
 
+    @OnIo
     override suspend fun onFireModeEntered() {
-        withContext(dispatchers.io()) {
-            fireDataStore.setUsedFireMode(true)
-            fireDataStore.setTabSwitcherPromoDismissed(true)
-            val activeMessage = remoteMessageModel.getActiveMessage()
-            if (activeMessage?.id == FIRE_TABS_PROMO_MESSAGE_ID) {
-                remoteMessageModel.onMessageDismissed(activeMessage)
-            }
+        fireDataStore.setUsedFireMode(true)
+        fireDataStore.setTabSwitcherPromoDismissed(true)
+        val activeMessage = remoteMessageModel.getActiveMessage()
+        if (activeMessage?.id == FIRE_TABS_PROMO_MESSAGE_ID) {
+            remoteMessageModel.onMessageDismissed(activeMessage)
         }
     }
 }

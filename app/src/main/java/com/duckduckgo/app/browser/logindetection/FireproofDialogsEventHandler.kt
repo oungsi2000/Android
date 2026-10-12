@@ -28,6 +28,7 @@ import com.duckduckgo.app.pixels.AppPixelName
 import com.duckduckgo.app.settings.db.SettingsDataStore
 import com.duckduckgo.app.statistics.pixels.Pixel
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import kotlinx.coroutines.withContext
 
 interface FireproofDialogsEventHandler {
@@ -65,13 +66,12 @@ class BrowserTabFireproofDialogsEventHandler(
         )
     }
 
+    @OnIo
     override suspend fun onUserConfirmedFireproofDialog(domain: String) {
-        withContext(dispatchers.io()) {
-            userEventsStore.removeUserEvent(UserEventKey.FIREPROOF_LOGIN_DIALOG_DISMISSED)
-            fireproofWebsiteRepository.fireproofWebsite(domain)?.let {
-                pixel.fire(AppPixelName.FIREPROOF_WEBSITE_LOGIN_ADDED, mapOf(Pixel.PixelParameter.FIRE_EXECUTED to userTriedFireButton().toString()))
-                emitEvent(Event.FireproofWebSiteSuccess(fireproofWebsiteEntity = it))
-            }
+        userEventsStore.removeUserEvent(UserEventKey.FIREPROOF_LOGIN_DIALOG_DISMISSED)
+        fireproofWebsiteRepository.fireproofWebsite(domain)?.let {
+            pixel.fire(AppPixelName.FIREPROOF_WEBSITE_LOGIN_ADDED, mapOf(Pixel.PixelParameter.FIRE_EXECUTED to userTriedFireButton().toString()))
+            emitEvent(Event.FireproofWebSiteSuccess(fireproofWebsiteEntity = it))
         }
     }
 

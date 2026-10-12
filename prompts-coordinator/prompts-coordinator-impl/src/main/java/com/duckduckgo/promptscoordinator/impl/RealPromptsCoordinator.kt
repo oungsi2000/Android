@@ -24,6 +24,7 @@ import com.duckduckgo.app.statistics.pixels.Pixel
 import com.duckduckgo.browser.api.install.AppInstall
 import com.duckduckgo.common.utils.CurrentTimeProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.promptscoordinator.api.PromptType
 import com.duckduckgo.promptscoordinator.api.PromptsCoordinator
@@ -75,15 +76,17 @@ class RealPromptsCoordinator @Inject constructor(
 
     private val lastPromptAt = AtomicLong(UNINITIALIZED)
 
-    override suspend fun isEnabled(): Boolean = withContext(dispatchers.io()) {
-        feature.self().isEnabled()
+    @OnIo
+    override suspend fun isEnabled(): Boolean {
+        return feature.self().isEnabled()
     }
 
-    override suspend fun tryClaim(type: PromptType): Boolean = withContext(dispatchers.io()) {
-        if (!feature.self().isEnabled()) return@withContext true
+    @OnIo
+    override suspend fun tryClaim(type: PromptType): Boolean {
+        if (!feature.self().isEnabled()) return true
 
         when (val immediate = attemptClaim(type)) {
-            is ClaimOutcome.Settled -> return@withContext immediate.granted
+            is ClaimOutcome.Settled -> return immediate.granted
             ClaimOutcome.SurfaceBusy -> Unit
         }
 
@@ -102,10 +105,10 @@ class RealPromptsCoordinator @Inject constructor(
                 "PromptsCoordinator: $type claim refused, surface still owned by " +
                     "${owner.value} after ${CLAIM_WAIT_TIMEOUT_MILLIS}ms"
             }
-            return@withContext false
+            return false
         }
 
-        when (val afterWait = attemptClaim(type)) {
+        return when (val afterWait = attemptClaim(type)) {
             is ClaimOutcome.Settled -> afterWait.granted
             ClaimOutcome.SurfaceBusy -> {
                 logcat { "PromptsCoordinator: $type claim refused, surface reclaimed by ${owner.value} while waiting" }

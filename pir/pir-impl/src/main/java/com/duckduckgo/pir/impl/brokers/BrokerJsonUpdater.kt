@@ -17,6 +17,7 @@
 package com.duckduckgo.pir.impl.brokers
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.pir.impl.PirRemoteFeatures
 import com.duckduckgo.pir.impl.pixels.PirPixelSender
@@ -26,7 +27,6 @@ import com.duckduckgo.pir.impl.store.PirRepository
 import com.duckduckgo.pir.impl.store.PirRepository.BrokerJson
 import com.squareup.anvil.annotations.ContributesBinding
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
 import logcat.asLog
 import logcat.logcat
@@ -64,16 +64,17 @@ class RealBrokerJsonUpdater @Inject constructor(
      * - Returns true if either the network update or the bundled fallback succeeded. Returns false only if both fail.
      * https://app.asana.com/0/1203581873609357/1207997441358507
      */
-    override suspend fun update(): Boolean = withContext(dispatcherProvider.io()) {
-        if (!pirRepository.isRepositoryAvailable()) return@withContext false
+    @OnIo
+    override suspend fun update(): Boolean {
+        if (!pirRepository.isRepositoryAvailable()) return false
 
         val networkUpdateSucceeded = runNetworkUpdate()
 
-        return@withContext if (!networkUpdateSucceeded) {
+        return if (!networkUpdateSucceeded) {
             if (pirRepository.getStoredBrokersCount() == 0) {
                 if (!pirRemoteFeatures.useBundledBrokerJsons().isEnabled()) {
                     logcat { "PIR-update: Bundled broker jsons disabled. Not loading bundled data." }
-                    return@withContext false
+                    return false
                 }
                 logcat { "PIR-update: Network update failed and no broker data stored, loading bundled broker data" }
                 runCatching { bundledBrokerDataLoader.loadBundledBrokerData() }
@@ -86,7 +87,7 @@ class RealBrokerJsonUpdater @Inject constructor(
                     .isSuccess
             } else {
                 logcat { "PIR-update: Network update failed but brokers already seeded from network, skipping bundle" }
-                return@withContext true
+                return true
             }
         } else {
             true

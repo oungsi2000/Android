@@ -20,6 +20,7 @@ import android.util.Base64
 import androidx.annotation.*
 import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.*
 import com.duckduckgo.sync.api.engine.*
 import com.duckduckgo.sync.api.engine.SyncEngine.SyncTrigger.ACCOUNT_CREATION
@@ -56,7 +57,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
 import logcat.LogPriority.INFO
 import logcat.LogPriority.VERBOSE
@@ -421,17 +421,18 @@ class AppSyncAccountRepository @Inject constructor(
         }
     }
 
-    override suspend fun renameDevice(device: ConnectedDevice): Result<Boolean> = withContext(dispatcherProvider.io()) {
+    @OnIo
+    override suspend fun renameDevice(device: ConnectedDevice): Result<Boolean> {
         // A device can only rename itself
         if (device.deviceId != syncStore.deviceId) {
-            return@withContext Error(reason = "Rename Device: only this device can be renamed").alsoFireUpdateDeviceErrorPixel()
+            return Error(reason = "Rename Device: only this device can be renamed").alsoFireUpdateDeviceErrorPixel()
         }
 
         val withDeviceInfo = syncFeature.canWriteDeviceInfo()
         val canPatchDevice = withDeviceInfo || syncFeature.canUsePatchEndpointForLegacyDeviceRename().isEnabled()
         logcat { "Sync-UnifiedDevices: rename via ${if (canPatchDevice) "PATCH" else "login"}, withDeviceInfo=$withDeviceInfo" }
         if (canPatchDevice) {
-            return@withContext when (
+            return when (
                 val result = deviceInfoUpdater.setThisDeviceName(
                     name = device.deviceName,
                     source = DeviceInfoUpdateSource.UPDATE,
@@ -444,12 +445,12 @@ class AppSyncAccountRepository @Inject constructor(
 
         // Legacy re-registration, which leaves device_info untouched
         val userId = syncStore.userId
-            ?: return@withContext Error(reason = "Rename Device: Not existing userId").alsoFireUpdateDeviceErrorPixel()
+            ?: return Error(reason = "Rename Device: Not existing userId").alsoFireUpdateDeviceErrorPixel()
         val primaryKey = syncStore.primaryKey
-            ?: return@withContext Error(reason = "Rename Device: Not existing primaryKey").alsoFireUpdateDeviceErrorPixel()
-        performLogin(userId, device.deviceId, device.deviceName, primaryKey).onFailure {
+            ?: return Error(reason = "Rename Device: Not existing primaryKey").alsoFireUpdateDeviceErrorPixel()
+        return performLogin(userId, device.deviceId, device.deviceName, primaryKey).onFailure {
             it.alsoFireUpdateDeviceErrorPixel()
-            return@withContext it.copy(code = LOGIN_FAILED.code)
+            return it.copy(code = LOGIN_FAILED.code)
         }
     }
 

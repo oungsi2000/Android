@@ -17,12 +17,12 @@
 package com.duckduckgo.pir.impl.pixels
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.pir.impl.models.scheduling.JobRecord
 import com.duckduckgo.pir.impl.models.scheduling.JobRecord.OptOutJobRecord.OptOutJobStatus.REMOVED
 import com.duckduckgo.pir.impl.models.scheduling.JobRecord.OptOutJobRecord.OptOutJobStatus.REQUESTED
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.math.round
@@ -46,18 +46,19 @@ interface OptOutSubmitRateCalculator {
 class RealOptOutSubmitRateCalculator @Inject constructor(
     private val dispatcherProvider: DispatcherProvider,
 ) : OptOutSubmitRateCalculator {
+    @OnIo
     override suspend fun calculateOptOutSubmitRate(
         allActiveOptOutJobsForBroker: List<JobRecord.OptOutJobRecord>,
         startDateMs: Long,
         endDateMs: Long,
-    ): Double? = withContext(dispatcherProvider.io()) {
+    ): Double? {
         // Get all opt out job records created within the given range for the specified broker
         val recordsCreatedWithinRange = allActiveOptOutJobsForBroker.filter {
             it.dateCreatedInMillis in startDateMs..endDateMs
         }
 
         // We don't need to calculate the rate if there are no records
-        if (recordsCreatedWithinRange.isEmpty()) return@withContext null
+        if (recordsCreatedWithinRange.isEmpty()) return null
 
         // Filter the records to only include those that were requested within 24 hours of creation
         val requestedRecordsWithinRange = recordsCreatedWithinRange.filter {
@@ -70,6 +71,6 @@ class RealOptOutSubmitRateCalculator @Inject constructor(
         val optOutSuccessRate =
             requestedRecordsWithinRange.size.toDouble() / recordsCreatedWithinRange.size.toDouble()
         val roundedOptOutSuccessRate = round(optOutSuccessRate * 100) / 100
-        return@withContext roundedOptOutSuccessRate
+        return roundedOptOutSuccessRate
     }
 }

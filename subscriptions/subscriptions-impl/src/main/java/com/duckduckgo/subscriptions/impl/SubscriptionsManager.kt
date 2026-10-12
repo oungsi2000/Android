@@ -21,6 +21,7 @@ import android.content.Context
 import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.common.utils.CurrentTimeProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.feature.toggles.api.FeatureTogglesInventory
 import com.duckduckgo.feature.toggles.api.Toggle
@@ -403,8 +404,9 @@ class RealSubscriptionsManager @Inject constructor(
         return subscriptionsFeature.get().privacyProFreeTrial().isEnabled() && freeTrialProductsAvailableInGooglePlay
     }
 
-    override suspend fun blackFridayOfferAvailable(): Boolean = withContext(dispatcherProvider.io()) {
-        return@withContext subscriptionsFeature.get().blackFridayOffer2025().isEnabled()
+    @OnIo
+    override suspend fun blackFridayOfferAvailable(): Boolean {
+        return subscriptionsFeature.get().blackFridayOffer2025().isEnabled()
     }
 
     override suspend fun switchSubscriptionPlan(

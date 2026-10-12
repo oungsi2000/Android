@@ -74,6 +74,7 @@ import com.duckduckgo.common.ui.view.dialog.TextAlertDialogBuilder
 import com.duckduckgo.common.ui.viewbinding.viewBinding
 import com.duckduckgo.common.utils.DispatcherProvider
 import com.duckduckgo.common.utils.FragmentViewModelFactory
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.edgetoedge.EdgeToEdgeHandler
 import com.duckduckgo.common.utils.plugins.PluginPoint
 import com.duckduckgo.di.scopes.FragmentScope
@@ -487,6 +488,7 @@ class AutofillManagementListMode : DuckDuckGoFragment(R.layout.fragment_autofill
         }
     }
 
+    @OnIo
     private suspend fun renderCredentialList(
         credentials: List<LoginCredentials>?,
         allowBreakageReporting: Boolean,
@@ -497,42 +499,40 @@ class AutofillManagementListMode : DuckDuckGoFragment(R.layout.fragment_autofill
         query: String,
         prioritizeDomainMatchesOnSearch: Boolean,
     ) {
-        withContext(dispatchers.io()) {
-            val currentUrl = getCurrentSiteUrl()
-            val credentialLoadingState = if (credentials == null) {
-                Loading
-            } else {
-                val querySuggestions =
-                    if (prioritizeDomainMatchesOnSearch) { suggestionMatcher.getQuerySuggestions(query, credentials) } else emptyList()
-                val directSuggestions = suggestionMatcher.getDirectSuggestions(currentUrl, credentials)
-                val shareableCredentials = suggestionMatcher.getShareableSuggestions(currentUrl)
-                val directSuggestionsListItems = suggestionListBuilder.build(
-                    querySuggestions,
-                    directSuggestions,
-                    shareableCredentials,
-                    allowBreakageReporting,
-                )
-                val groupedCredentials = grouper.group(credentials)
+        val currentUrl = getCurrentSiteUrl()
+        val credentialLoadingState = if (credentials == null) {
+            Loading
+        } else {
+            val querySuggestions =
+                if (prioritizeDomainMatchesOnSearch) { suggestionMatcher.getQuerySuggestions(query, credentials) } else emptyList()
+            val directSuggestions = suggestionMatcher.getDirectSuggestions(currentUrl, credentials)
+            val shareableCredentials = suggestionMatcher.getShareableSuggestions(currentUrl)
+            val directSuggestionsListItems = suggestionListBuilder.build(
+                querySuggestions,
+                directSuggestions,
+                shareableCredentials,
+                allowBreakageReporting,
+            )
+            val groupedCredentials = grouper.group(credentials)
 
-                val hasSuggestions = directSuggestions.isNotEmpty() || shareableCredentials.isNotEmpty()
-                if (allowBreakageReporting && hasSuggestions) {
-                    viewModel.onReportBreakageShown()
-                }
-
-                Loaded(
-                    directSuggestionsListItems = directSuggestionsListItems,
-                    groupedCredentials = groupedCredentials,
-                    showGoogleImportPasswordsButton = showGoogleImportPasswordsButton,
-                )
+            val hasSuggestions = directSuggestions.isNotEmpty() || shareableCredentials.isNotEmpty()
+            if (allowBreakageReporting && hasSuggestions) {
+                viewModel.onReportBreakageShown()
             }
 
-            withContext(dispatchers.main()) {
-                adapter.showLogins(
-                    autofillToggleState = AutofillToggleState(enabled = autofillEnabled, visible = showAutofillToggle),
-                    credentialsLoadedState = credentialLoadingState,
-                    promotionView = promotionView,
-                )
-            }
+            Loaded(
+                directSuggestionsListItems = directSuggestionsListItems,
+                groupedCredentials = groupedCredentials,
+                showGoogleImportPasswordsButton = showGoogleImportPasswordsButton,
+            )
+        }
+
+        withContext(dispatchers.main()) {
+            adapter.showLogins(
+                autofillToggleState = AutofillToggleState(enabled = autofillEnabled, visible = showAutofillToggle),
+                credentialsLoadedState = credentialLoadingState,
+                promotionView = promotionView,
+            )
         }
     }
 

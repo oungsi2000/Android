@@ -20,6 +20,7 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.data.store.api.SharedPreferencesProvider
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
@@ -29,7 +30,6 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import okio.ByteString.Companion.decodeBase64
 import okio.ByteString.Companion.toByteString
 import javax.inject.Inject
@@ -72,31 +72,30 @@ class RealPirSecureStorageKeyStore @Inject constructor(
         }
     }
 
+    @OnIo
     override suspend fun updateKey(
         keyName: String,
         keyValue: ByteArray?,
     ) {
-        withContext(dispatcherProvider.io()) {
-            getEncryptedPreferences()?.edit(commit = true) {
-                if (keyValue == null) {
-                    remove(keyName)
-                } else {
-                    putString(keyName, keyValue.toByteString().base64())
-                }
+        getEncryptedPreferences()?.edit(commit = true) {
+            if (keyValue == null) {
+                remove(keyName)
+            } else {
+                putString(keyName, keyValue.toByteString().base64())
             }
         }
     }
 
+    @OnIo
     override suspend fun getKey(keyName: String): ByteArray? {
-        return withContext(dispatcherProvider.io()) {
-            return@withContext getEncryptedPreferences()?.getString(keyName, null)?.run {
-                this.decodeBase64()?.toByteArray()
-            }
+        return getEncryptedPreferences()?.getString(keyName, null)?.run {
+            this.decodeBase64()?.toByteArray()
         }
     }
 
-    override suspend fun canUseEncryption(): Boolean = withContext(dispatcherProvider.io()) {
-        getEncryptedPreferences() != null
+    @OnIo
+    override suspend fun canUseEncryption(): Boolean {
+        return getEncryptedPreferences() != null
     }
 
     private suspend fun getEncryptedPreferences(): SharedPreferences? {

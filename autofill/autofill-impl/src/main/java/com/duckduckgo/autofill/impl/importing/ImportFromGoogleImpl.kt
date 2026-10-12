@@ -24,10 +24,10 @@ import com.duckduckgo.autofill.api.ImportFromGoogle
 import com.duckduckgo.autofill.impl.importing.takeout.webflow.ImportBookmarksViaGoogleTakeoutScreen
 import com.duckduckgo.autofill.impl.importing.takeout.webflow.ImportGoogleBookmarkResult
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.navigation.api.GlobalActivityStarter
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import com.duckduckgo.autofill.api.ImportFromGoogle.ImportFromGoogleResult as PublicResult
 
@@ -40,35 +40,33 @@ class ImportFromGoogleImpl @Inject constructor(
     private val webViewCapabilityChecker: ImportGoogleBookmarksWebViewCapabilityChecker,
 ) : ImportFromGoogle {
 
+    @OnIo
     override suspend fun getBookmarksImportLaunchIntent(): Intent? {
-        return withContext(dispatchers.io()) {
-            if (autofillFeature.canImportBookmarksFromGoogleTakeout().isEnabled() && webViewCapabilityChecker.webViewCapableOfImporting()) {
-                val launchSource = getLaunchSource()
-                globalActivityStarter.startIntent(context, ImportBookmarksViaGoogleTakeoutScreen(launchSource))
-            } else {
-                null
-            }
+        return if (autofillFeature.canImportBookmarksFromGoogleTakeout().isEnabled() && webViewCapabilityChecker.webViewCapableOfImporting()) {
+            val launchSource = getLaunchSource()
+            globalActivityStarter.startIntent(context, ImportBookmarksViaGoogleTakeoutScreen(launchSource))
+        } else {
+            null
         }
     }
 
+    @OnIo
     override suspend fun parseResult(intent: Intent?): PublicResult {
-        return withContext(dispatchers.io()) {
-            val data = intent?.extras
-            if (data == null) {
-                return@withContext PublicResult.UserCancelled
-            }
+        val data = intent?.extras
+        if (data == null) {
+            return PublicResult.UserCancelled
+        }
 
-            val result = BundleCompat.getParcelable(
-                data,
-                ImportGoogleBookmarkResult.RESULT_KEY_DETAILS,
-                ImportGoogleBookmarkResult::class.java,
-            )
+        val result = BundleCompat.getParcelable(
+            data,
+            ImportGoogleBookmarkResult.RESULT_KEY_DETAILS,
+            ImportGoogleBookmarkResult::class.java,
+        )
 
-            when (result) {
-                is ImportGoogleBookmarkResult.Success -> PublicResult.Success(result.importedCount)
-                is ImportGoogleBookmarkResult.UserCancelled, null -> PublicResult.UserCancelled
-                is ImportGoogleBookmarkResult.Error -> PublicResult.Error
-            }
+        return when (result) {
+            is ImportGoogleBookmarkResult.Success -> PublicResult.Success(result.importedCount)
+            is ImportGoogleBookmarkResult.UserCancelled, null -> PublicResult.UserCancelled
+            is ImportGoogleBookmarkResult.Error -> PublicResult.Error
         }
     }
 

@@ -53,6 +53,7 @@ import com.duckduckgo.brokensite.api.BrokenSitePrompt
 import com.duckduckgo.brokensite.api.RefreshPattern
 import com.duckduckgo.common.ui.store.AppTheme
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.device.DeviceInfo
 import com.duckduckgo.common.utils.plugins.PluginPoint
 import com.duckduckgo.di.scopes.AppScope
@@ -137,16 +138,19 @@ class CtaViewModel @Inject constructor(
             .launchIn(coroutineScope)
     }
 
-    private suspend fun isBrandDesignUpdateEnabled(): Boolean = withContext(dispatchers.io()) {
-        onboardingBrandDesignUpdateToggles.brandDesignUpdate().isEnabled()
+    @OnIo
+    private suspend fun isBrandDesignUpdateEnabled(): Boolean {
+        return onboardingBrandDesignUpdateToggles.brandDesignUpdate().isEnabled()
     }
 
-    private suspend fun isOnboardingImprovementsEnabled(): Boolean = withContext(dispatchers.io()) {
-        onboardingBrandDesignUpdateToggles.onboardingImprovements().isEnabled()
+    @OnIo
+    private suspend fun isOnboardingImprovementsEnabled(): Boolean {
+        return onboardingBrandDesignUpdateToggles.onboardingImprovements().isEnabled()
     }
 
-    private suspend fun isOnboardingImprovementsV2Enabled(): Boolean = withContext(dispatchers.io()) {
-        onboardingBrandDesignUpdateToggles.onboardingImprovementsV2().isEnabled()
+    @OnIo
+    private suspend fun isOnboardingImprovementsV2Enabled(): Boolean {
+        return onboardingBrandDesignUpdateToggles.onboardingImprovementsV2().isEnabled()
     }
 
     /**
@@ -220,38 +224,36 @@ class CtaViewModel @Inject constructor(
         }
     }
 
+    @OnIo
     suspend fun dismissPulseAnimation() {
-        withContext(dispatchers.io()) {
-            dismissedCtaDao.insert(DismissedCta(CtaId.DAX_FIRE_BUTTON))
-            dismissedCtaDao.insert(DismissedCta(CtaId.DAX_FIRE_BUTTON_PULSE))
-        }
+        dismissedCtaDao.insert(DismissedCta(CtaId.DAX_FIRE_BUTTON))
+        dismissedCtaDao.insert(DismissedCta(CtaId.DAX_FIRE_BUTTON_PULSE))
     }
 
+    @OnIo
     suspend fun onCtaShown(cta: Cta) {
-        withContext(dispatchers.io()) {
-            contextualOnboardingPixelNames(cta).forEach { onboardingPixelSender.fireContextual(it, OnboardingPixelAction.Shown) }
-            cta.shownPixel?.let {
-                val canSendPixel = when (cta) {
-                    is DaxCta -> cta.canSendShownPixel()
-                    else -> true
-                }
-                if (canSendPixel) {
-                    pixel.fire(it, cta.pixelShownParameters())
-                }
+        contextualOnboardingPixelNames(cta).forEach { onboardingPixelSender.fireContextual(it, OnboardingPixelAction.Shown) }
+        cta.shownPixel?.let {
+            val canSendPixel = when (cta) {
+                is DaxCta -> cta.canSendShownPixel()
+                else -> true
             }
-            if (cta is DaxCta && cta.markAsReadOnShow) {
-                dismissedCtaDao.insert(DismissedCta(cta.ctaId))
+            if (canSendPixel) {
+                pixel.fire(it, cta.pixelShownParameters())
             }
-            if (cta is BrokenSitePromptDialogCta) {
-                brokenSitePrompt.ctaShown()
-            }
-            if (cta is DaxBubbleCta.DaxSubscriptionCta || cta is DaxSubscriptionBrandDesignUpdateBubbleCta || cta is SubscriptionPromoModalCta) {
-                subscriptionPromoCtaShownPlugins.getPlugins().forEach { it.onSubscriptionPromoCtaShown() }
-            }
-            if (cta is SubscriptionPromoModalCta) {
-                pixel.fire(cta.flow.shownPixel, cta.pixelShownParameters())
-                dismissedCtaDao.insert(DismissedCta(cta.ctaId))
-            }
+        }
+        if (cta is DaxCta && cta.markAsReadOnShow) {
+            dismissedCtaDao.insert(DismissedCta(cta.ctaId))
+        }
+        if (cta is BrokenSitePromptDialogCta) {
+            brokenSitePrompt.ctaShown()
+        }
+        if (cta is DaxBubbleCta.DaxSubscriptionCta || cta is DaxSubscriptionBrandDesignUpdateBubbleCta || cta is SubscriptionPromoModalCta) {
+            subscriptionPromoCtaShownPlugins.getPlugins().forEach { it.onSubscriptionPromoCtaShown() }
+        }
+        if (cta is SubscriptionPromoModalCta) {
+            pixel.fire(cta.flow.shownPixel, cta.pixelShownParameters())
+            dismissedCtaDao.insert(DismissedCta(cta.ctaId))
         }
     }
 
@@ -262,34 +264,33 @@ class CtaViewModel @Inject constructor(
         }
     }
 
+    @OnIo
     suspend fun onUserDismissedCta(
         cta: Cta,
         viaCloseBtn: Boolean = false,
         viaSkipBtn: Boolean = false,
     ) {
-        withContext(dispatchers.io()) {
-            if (viaCloseBtn || viaSkipBtn) {
-                contextualOnboardingPixelNames(cta).forEach {
-                    onboardingPixelSender.fireContextual(it, OnboardingPixelAction.Clicked(engaged = false))
-                }
+        if (viaCloseBtn || viaSkipBtn) {
+            contextualOnboardingPixelNames(cta).forEach {
+                onboardingPixelSender.fireContextual(it, OnboardingPixelAction.Clicked(engaged = false))
             }
-            if (cta is BrokenSitePromptDialogCta) {
-                brokenSitePrompt.userDismissedPrompt()
-            }
+        }
+        if (cta is BrokenSitePromptDialogCta) {
+            brokenSitePrompt.userDismissedPrompt()
+        }
 
-            cta.cancelPixel?.let {
+        cta.cancelPixel?.let {
+            pixel.fire(it, cta.pixelCancelParameters())
+        }
+        if (viaCloseBtn) {
+            cta.closePixel?.let {
                 pixel.fire(it, cta.pixelCancelParameters())
             }
-            if (viaCloseBtn) {
-                cta.closePixel?.let {
-                    pixel.fire(it, cta.pixelCancelParameters())
-                }
-            }
-
-            dismissedCtaDao.insert(DismissedCta(cta.ctaId))
-
-            completeStageIfDaxOnboardingCompleted()
         }
+
+        dismissedCtaDao.insert(DismissedCta(cta.ctaId))
+
+        completeStageIfDaxOnboardingCompleted()
     }
 
     suspend fun onUserClickCtaOkButton(cta: Cta) {
@@ -310,35 +311,33 @@ class CtaViewModel @Inject constructor(
         }
     }
 
+    @OnIo
     suspend fun prepareAndMarkDuckAiEndCtaForInputScreen(): DuckAiOnboardingEndCtaVariant {
-        return withContext(dispatchers.io()) {
-            val shouldShow = canShowDuckAiEndCta() && !settingsDataStore.hideTips
-            if (!shouldShow) return@withContext DuckAiOnboardingEndCtaVariant.NONE
+        val shouldShow = canShowDuckAiEndCta() && !settingsDataStore.hideTips
+        if (!shouldShow) return DuckAiOnboardingEndCtaVariant.NONE
 
-            setInputToggleStateForDuckAiEndCta()
-            dismissedCtaDao.insert(DismissedCta(CtaId.DAX_DUCK_AI_END))
-            if (canSendShownPixel(onboardingStore, Pixel.PixelValues.DUCK_AI_END_CTA)) {
-                val journey = addCtaToHistory(onboardingStore, appInstallStore, Pixel.PixelValues.DUCK_AI_END_CTA)
-                pixel.fire(AppPixelName.ONBOARDING_DAX_CTA_SHOWN, mapOf(Pixel.PixelParameter.CTA_SHOWN to journey))
-            }
-            if (isBrandDesignUpdateEnabled()) {
-                DuckAiOnboardingEndCtaVariant.BRAND_DESIGN_UPDATE
-            } else {
-                DuckAiOnboardingEndCtaVariant.LEGACY
-            }
+        setInputToggleStateForDuckAiEndCta()
+        dismissedCtaDao.insert(DismissedCta(CtaId.DAX_DUCK_AI_END))
+        if (canSendShownPixel(onboardingStore, Pixel.PixelValues.DUCK_AI_END_CTA)) {
+            val journey = addCtaToHistory(onboardingStore, appInstallStore, Pixel.PixelValues.DUCK_AI_END_CTA)
+            pixel.fire(AppPixelName.ONBOARDING_DAX_CTA_SHOWN, mapOf(Pixel.PixelParameter.CTA_SHOWN to journey))
+        }
+        return if (isBrandDesignUpdateEnabled()) {
+            DuckAiOnboardingEndCtaVariant.BRAND_DESIGN_UPDATE
+        } else {
+            DuckAiOnboardingEndCtaVariant.LEGACY
         }
     }
 
+    @OnIo
     suspend fun onDuckAiEndCtaInteraction(okClicked: Boolean) {
-        withContext(dispatchers.io()) {
-            val params = mapOf(Pixel.PixelParameter.CTA_SHOWN to Pixel.PixelValues.DUCK_AI_END_CTA)
-            if (okClicked) {
-                pixel.fire(AppPixelName.ONBOARDING_DAX_CTA_OK_BUTTON, params)
-            } else {
-                pixel.fire(AppPixelName.ONBOARDING_DAX_CTA_DISMISS_BUTTON, params)
-            }
-            completeStageIfDaxOnboardingCompleted()
+        val params = mapOf(Pixel.PixelParameter.CTA_SHOWN to Pixel.PixelValues.DUCK_AI_END_CTA)
+        if (okClicked) {
+            pixel.fire(AppPixelName.ONBOARDING_DAX_CTA_OK_BUTTON, params)
+        } else {
+            pixel.fire(AppPixelName.ONBOARDING_DAX_CTA_DISMISS_BUTTON, params)
         }
+        completeStageIfDaxOnboardingCompleted()
     }
 
     suspend fun refreshCta(
@@ -358,54 +357,51 @@ class CtaViewModel @Inject constructor(
         }
     }
 
+    @OnIo
     suspend fun getFireDialogCta(): OnboardingDaxDialogCta? {
-        return withContext(dispatchers.io()) {
-            if (!daxOnboardingActive() || daxDialogFireEducationShown() || hideTips()) return@withContext null
-            if (tooManyTabsOpenForFireEducation()) return@withContext null
-            if (isBrandDesignUpdateEnabled()) {
-                return@withContext DaxFireButtonBrandDesignUpdateContextualCta(
-                    onboardingStore = onboardingStore,
-                    appInstallStore = appInstallStore,
-                    isLightTheme = appTheme.isLightModeEnabled(),
-                    deviceInfo = deviceInfo,
-                )
-            }
-            OnboardingDaxDialogCta.DaxFireButtonCta(onboardingStore, appInstallStore)
-        }
-    }
-
-    suspend fun getSiteSuggestionsDialogCta(onSiteSuggestionOptionClicked: (index: Int) -> Unit): OnboardingDaxDialogCta? {
-        return withContext(dispatchers.io()) {
-            if (!daxOnboardingActive() || !canShowDaxIntroVisitSiteCta()) return@withContext null
-            if (isBrandDesignUpdateEnabled()) {
-                return@withContext DaxSiteSuggestionsBrandDesignUpdateContextualCta(
-                    onboardingStore,
-                    appInstallStore,
-                    isLightTheme = appTheme.isLightModeEnabled(),
-                    deviceInfo = deviceInfo,
-                )
-            }
-            OnboardingDaxDialogCta.DaxSiteSuggestionsCta(
-                onboardingStore,
-                appInstallStore,
-                onSiteSuggestionOptionClicked,
+        if (!daxOnboardingActive() || daxDialogFireEducationShown() || hideTips()) return null
+        if (tooManyTabsOpenForFireEducation()) return null
+        if (isBrandDesignUpdateEnabled()) {
+            return DaxFireButtonBrandDesignUpdateContextualCta(
+                onboardingStore = onboardingStore,
+                appInstallStore = appInstallStore,
+                isLightTheme = appTheme.isLightModeEnabled(),
+                deviceInfo = deviceInfo,
             )
         }
+        return OnboardingDaxDialogCta.DaxFireButtonCta(onboardingStore, appInstallStore)
     }
 
-    suspend fun getEndStaticDialogCta(): OnboardingDaxDialogCta? {
-        return withContext(dispatchers.io()) {
-            if (!daxOnboardingActive() && daxDialogEndShown()) return@withContext null
-            if (isBrandDesignUpdateEnabled()) {
-                return@withContext DaxEndBrandDesignUpdateContextualCta(
-                    onboardingStore,
-                    appInstallStore,
-                    isLightTheme = appTheme.isLightModeEnabled(),
-                    deviceInfo = deviceInfo,
-                )
-            }
-            return@withContext OnboardingDaxDialogCta.DaxEndCta(onboardingStore, appInstallStore)
+    @OnIo
+    suspend fun getSiteSuggestionsDialogCta(onSiteSuggestionOptionClicked: (index: Int) -> Unit): OnboardingDaxDialogCta? {
+        if (!daxOnboardingActive() || !canShowDaxIntroVisitSiteCta()) return null
+        if (isBrandDesignUpdateEnabled()) {
+            return DaxSiteSuggestionsBrandDesignUpdateContextualCta(
+                onboardingStore,
+                appInstallStore,
+                isLightTheme = appTheme.isLightModeEnabled(),
+                deviceInfo = deviceInfo,
+            )
         }
+        return OnboardingDaxDialogCta.DaxSiteSuggestionsCta(
+            onboardingStore,
+            appInstallStore,
+            onSiteSuggestionOptionClicked,
+        )
+    }
+
+    @OnIo
+    suspend fun getEndStaticDialogCta(): OnboardingDaxDialogCta? {
+        if (!daxOnboardingActive() && daxDialogEndShown()) return null
+        if (isBrandDesignUpdateEnabled()) {
+            return DaxEndBrandDesignUpdateContextualCta(
+                onboardingStore,
+                appInstallStore,
+                isLightTheme = appTheme.isLightModeEnabled(),
+                deviceInfo = deviceInfo,
+            )
+        }
+        return OnboardingDaxDialogCta.DaxEndCta(onboardingStore, appInstallStore)
     }
 
     private suspend fun setInputToggleStateForDuckAiEndCta() {
@@ -703,26 +699,24 @@ class CtaViewModel @Inject constructor(
         return isDuckPlayerUrl
     }
 
+    @OnIo
     suspend fun areBubbleDaxDialogsCompleted(): Boolean {
-        return withContext(dispatchers.io()) {
-            val isLastContextDialogShown = when {
-                subscriptionPromoModalDecider.isSubscriptionCtaAvailable() -> daxDialogSubscriptionShown()
-                onboardingStore.isDuckAiOnboardingFlow() -> duckAiEndShown()
-                else -> daxDialogEndShown()
-            }
-            isLastContextDialogShown || hideTips() || !userStageStore.daxOnboardingActive()
+        val isLastContextDialogShown = when {
+            subscriptionPromoModalDecider.isSubscriptionCtaAvailable() -> daxDialogSubscriptionShown()
+            onboardingStore.isDuckAiOnboardingFlow() -> duckAiEndShown()
+            else -> daxDialogEndShown()
         }
+        return isLastContextDialogShown || hideTips() || !userStageStore.daxOnboardingActive()
     }
 
+    @OnIo
     suspend fun areInContextDaxDialogsCompleted(): Boolean {
-        return withContext(dispatchers.io()) {
-            val inContextDaxCtasShown = if (onboardingStore.isDuckAiOnboardingFlow()) {
-                duckAiFireButtonShown() && duckAiEndShown()
-            } else {
-                daxDialogSerpShown() && daxDialogTrackersFoundShown() && daxDialogFireEducationShown() && daxDialogEndShown()
-            }
-            inContextDaxCtasShown || hideTips() || !userStageStore.daxOnboardingActive()
+        val inContextDaxCtasShown = if (onboardingStore.isDuckAiOnboardingFlow()) {
+            duckAiFireButtonShown() && duckAiEndShown()
+        } else {
+            daxDialogSerpShown() && daxDialogTrackersFoundShown() && daxDialogFireEducationShown() && daxDialogEndShown()
         }
+        return inContextDaxCtasShown || hideTips() || !userStageStore.daxOnboardingActive()
     }
 
     private fun daxDialogIntroShown(): Boolean = dismissedCtaDao.exists(CtaId.DAX_INTRO)

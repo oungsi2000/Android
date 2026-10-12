@@ -17,12 +17,12 @@
 package com.duckduckgo.app.browser.weblocalstorage
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 data class Domains(val list: List<String> = emptyList())
@@ -49,10 +49,11 @@ class WebLocalStorageSettingsJsonParserImpl @Inject constructor(
         return moshi.adapter(SettingsJson::class.java)
     }
 
-    override suspend fun parseJson(json: String?): WebLocalStorageSettings = withContext(dispatcherProvider.io()) {
-        if (json == null) return@withContext WebLocalStorageSettings()
+    @OnIo
+    override suspend fun parseJson(json: String?): WebLocalStorageSettings {
+        if (json == null) return WebLocalStorageSettings()
 
-        kotlin.runCatching {
+        return kotlin.runCatching {
             val parsed = jsonAdapter.fromJson(json)
             val domains = parsed?.asDomains() ?: Domains()
             val matchingRegex = parsed?.asMatchingRegex() ?: MatchingRegex()

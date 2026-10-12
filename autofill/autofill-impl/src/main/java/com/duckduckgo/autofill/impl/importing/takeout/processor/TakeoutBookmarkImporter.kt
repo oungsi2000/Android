@@ -18,12 +18,12 @@ package com.duckduckgo.autofill.impl.importing.takeout.processor
 
 import android.net.Uri
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.savedsites.api.service.ImportSavedSitesResult
 import com.duckduckgo.savedsites.api.service.SavedSitesImporter
 import com.duckduckgo.savedsites.api.service.SavedSitesImporter.ImportFolder
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 
@@ -49,19 +49,19 @@ class RealTakeoutBookmarkImporter @Inject constructor(
     private val savedSitesImporter: SavedSitesImporter,
     private val dispatchers: DispatcherProvider,
 ) : TakeoutBookmarkImporter {
+    @OnIo
     override suspend fun importBookmarks(
         tempFileUri: Uri,
         destination: ImportFolder,
-    ): ImportSavedSitesResult =
-        withContext(dispatchers.io()) {
-            try {
-                savedSitesImporter.import(tempFileUri, destination)
-            } catch (exception: Exception) {
-                ImportSavedSitesResult.Error(exception)
-            } finally {
-                cleanupTempFile(tempFileUri)
-            }
+    ): ImportSavedSitesResult {
+        return try {
+            savedSitesImporter.import(tempFileUri, destination)
+        } catch (exception: Exception) {
+            ImportSavedSitesResult.Error(exception)
+        } finally {
+            cleanupTempFile(tempFileUri)
         }
+    }
 
     private fun cleanupTempFile(tempFileUri: Uri) {
         runCatching {

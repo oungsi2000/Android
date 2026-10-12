@@ -17,10 +17,10 @@
 package com.duckduckgo.contentscopescripts.impl
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import javax.inject.Inject
 
@@ -44,9 +44,8 @@ class RealWebViewCompatContentScopeJSReader @Inject constructor(
 
     private suspend fun loadJs(resourceName: String): String = readResource(resourceName).use { it?.readText() }.orEmpty()
 
+    @OnIo
     private suspend fun readResource(resourceName: String): BufferedReader? {
-        return withContext(dispatcherProvider.io()) {
-            javaClass.classLoader?.getResource(resourceName)?.openStream()?.bufferedReader()
-        }
+        return javaClass.classLoader?.getResource(resourceName)?.openStream()?.bufferedReader()
     }
 }

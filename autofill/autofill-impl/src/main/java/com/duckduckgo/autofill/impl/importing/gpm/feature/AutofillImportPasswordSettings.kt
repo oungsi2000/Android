@@ -18,11 +18,11 @@ package com.duckduckgo.autofill.impl.importing.gpm.feature
 
 import com.duckduckgo.autofill.api.AutofillFeature
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
-import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import javax.inject.Inject
 
@@ -54,22 +54,21 @@ class AutofillImportPasswordConfigStoreImpl @Inject constructor(
         moshi.adapter(ImportConfigJson::class.java)
     }
 
+    @OnIo
     override suspend fun getConfig(): AutofillImportPasswordSettings {
-        return withContext(dispatchers.io()) {
-            val config = autofillFeature.canImportFromGooglePasswordManager().getSettings()?.let {
-                runCatching {
-                    jsonAdapter.fromJson(it)
-                }.getOrNull()
-            }
-
-            AutofillImportPasswordSettings(
-                canImportFromGooglePasswords = autofillFeature.canImportFromGooglePasswordManager().isEnabled(),
-                launchUrlGooglePasswords = config?.launchUrl ?: LAUNCH_URL_DEFAULT,
-                canInjectJavascript = config?.canInjectJavascript ?: CAN_INJECT_JAVASCRIPT_DEFAULT,
-                javascriptConfigGooglePasswords = config?.javascriptConfig?.toString() ?: JAVASCRIPT_CONFIG_DEFAULT,
-                urlMappings = config?.urlMappings.convertFromJsonModel(),
-            )
+        val config = autofillFeature.canImportFromGooglePasswordManager().getSettings()?.let {
+            runCatching {
+                jsonAdapter.fromJson(it)
+            }.getOrNull()
         }
+
+        return AutofillImportPasswordSettings(
+            canImportFromGooglePasswords = autofillFeature.canImportFromGooglePasswordManager().isEnabled(),
+            launchUrlGooglePasswords = config?.launchUrl ?: LAUNCH_URL_DEFAULT,
+            canInjectJavascript = config?.canInjectJavascript ?: CAN_INJECT_JAVASCRIPT_DEFAULT,
+            javascriptConfigGooglePasswords = config?.javascriptConfig?.toString() ?: JAVASCRIPT_CONFIG_DEFAULT,
+            urlMappings = config?.urlMappings.convertFromJsonModel(),
+        )
     }
 
     companion object {

@@ -44,6 +44,7 @@ import com.duckduckgo.app.pixels.AppPixelName
 import com.duckduckgo.app.statistics.pixels.Pixel
 import com.duckduckgo.browser.api.UserBrowserProperties
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.feature.toggles.api.Toggle
 import com.duckduckgo.privacy.config.api.PrivacyConfigCallbackPlugin
@@ -67,7 +68,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
 import logcat.asLog
 import logcat.logcat
@@ -499,8 +499,9 @@ class AdditionalDefaultBrowserPromptsImpl @Inject constructor(
         _commands.trySend(command)
     }
 
-    private suspend fun DefaultBrowserPromptsFeatureToggles.parseFeatureSettings(): FeatureSettings? = withContext(dispatchers.io()) {
-        defaultBrowserPrompts25().getSettings()?.let { settings ->
+    @OnIo
+    private suspend fun DefaultBrowserPromptsFeatureToggles.parseFeatureSettings(): FeatureSettings? {
+        return defaultBrowserPrompts25().getSettings()?.let { settings ->
             try {
                 featureSettingsJsonAdapter.fromJson(settings)?.toFeatureSettings()
             } catch (e: Exception) {

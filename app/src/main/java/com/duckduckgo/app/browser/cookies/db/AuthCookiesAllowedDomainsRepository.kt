@@ -18,6 +18,7 @@ package com.duckduckgo.app.browser.cookies.db
 
 import com.duckduckgo.app.browser.UriString
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
@@ -42,21 +43,18 @@ class AuthCookiesAllowedDomainsRepository @Inject constructor(
         }
     }
 
+    @OnIo
     suspend fun getDomain(domain: String): AuthCookieAllowedDomainEntity? {
-        return withContext(dispatcherProvider.io()) {
-            authCookiesAllowedDomainsDao.getDomain(domain)
-        }
+        return authCookiesAllowedDomainsDao.getDomain(domain)
     }
 
+    @OnIo
     suspend fun removeDomain(authCookieAllowedDomainEntity: AuthCookieAllowedDomainEntity) {
-        withContext(dispatcherProvider.io()) {
-            authCookiesAllowedDomainsDao.delete(authCookieAllowedDomainEntity)
-        }
+        authCookiesAllowedDomainsDao.delete(authCookieAllowedDomainEntity)
     }
 
+    @OnIo
     suspend fun deleteAll(exceptionList: List<String> = emptyList()) {
-        withContext(dispatcherProvider.io()) {
-            authCookiesAllowedDomainsDao.deleteAll(exceptionList)
-        }
+        authCookiesAllowedDomainsDao.deleteAll(exceptionList)
     }
 }

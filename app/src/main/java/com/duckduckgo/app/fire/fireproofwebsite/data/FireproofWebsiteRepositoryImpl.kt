@@ -22,6 +22,7 @@ import com.duckduckgo.app.browser.UriString
 import com.duckduckgo.app.browser.favicon.FaviconManager
 import com.duckduckgo.app.fire.FireproofRepository
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.Lazy
@@ -100,22 +101,19 @@ class FireproofWebsiteRepositoryImpl @Inject constructor(
         return fireproofWebsiteDao.getFireproofWebsiteSync(host) != null
     }
 
+    @OnIo
     override suspend fun removeFireproofWebsite(fireproofWebsiteEntity: FireproofWebsiteEntity) {
-        withContext(dispatchers.io()) {
-            faviconManager.get().deletePersistedFavicon(fireproofWebsiteEntity.domain)
-            fireproofWebsiteDao.delete(fireproofWebsiteEntity)
-        }
+        faviconManager.get().deletePersistedFavicon(fireproofWebsiteEntity.domain)
+        fireproofWebsiteDao.delete(fireproofWebsiteEntity)
     }
 
+    @OnIo
     override suspend fun fireproofWebsitesCountByDomain(domain: String): Int {
-        return withContext(dispatchers.io()) {
-            fireproofWebsiteDao.fireproofWebsitesCountByDomain(domain)
-        }
+        return fireproofWebsiteDao.fireproofWebsitesCountByDomain(domain)
     }
 
+    @OnIo
     override suspend fun removeAllFireproofWebsites() {
-        withContext(dispatchers.io()) {
-            fireproofWebsiteDao.deleteAll()
-        }
+        fireproofWebsiteDao.deleteAll()
     }
 }

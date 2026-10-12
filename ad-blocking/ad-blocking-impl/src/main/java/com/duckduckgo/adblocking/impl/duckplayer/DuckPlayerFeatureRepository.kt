@@ -23,6 +23,7 @@ import com.duckduckgo.adblocking.api.duckplayer.PrivatePlayerMode.Disabled
 import com.duckduckgo.adblocking.api.duckplayer.PrivatePlayerMode.Enabled
 import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.Lazy
@@ -118,13 +119,12 @@ class RealDuckPlayerFeatureRepository @Inject constructor(
         }
     }
 
+    @OnIo
     override suspend fun setUserPreferences(
         userPreferences: UserPreferences,
     ) {
-        withContext(dispatcherProvider.io()) {
-            duckPlayerDataStore.setOverlayInteracted(userPreferences.overlayInteracted)
-            duckPlayerDataStore.setPrivatePlayerMode(userPreferences.privatePlayerMode.value)
-        }
+        duckPlayerDataStore.setOverlayInteracted(userPreferences.overlayInteracted)
+        duckPlayerDataStore.setPrivatePlayerMode(userPreferences.privatePlayerMode.value)
     }
 
     override fun observeUserPreferences(): Flow<StoredUserPreferences> {

@@ -20,6 +20,7 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.data.store.api.SharedPreferencesProvider
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
@@ -76,10 +77,9 @@ class RealMetricsPixelStore @Inject constructor(
         }
     }
 
+    @OnIo
     override suspend fun wasPixelFired(tag: String): Boolean {
-        return withContext(dispatcherProvider.io()) {
-            preferences.getBoolean(tag, false)
-        }
+        return preferences.getBoolean(tag, false)
     }
 
     override suspend fun increaseMetricForPixelDefinition(definition: PixelDefinition) =
@@ -93,10 +93,9 @@ class RealMetricsPixelStore @Inject constructor(
             preferences.getInt(tag, 0)
         }
 
+    @OnIo
     override suspend fun getMetricForPixelDefinition(definition: PixelDefinition): Int {
-        return withContext(dispatcherProvider.io()) {
-            preferences.getInt("$definition", 0)
-        }
+        return preferences.getInt("$definition", 0)
     }
 
     companion object {

@@ -17,6 +17,7 @@
 package com.duckduckgo.remote.messaging.impl
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.remote.messaging.api.Action
 import com.duckduckgo.remote.messaging.api.Content
@@ -44,11 +45,10 @@ class RealRemoteMessageModel @Inject constructor(
     override fun observeActiveMessages(activeTrigger: MessageTrigger?): Flow<RemoteMessage?> =
         remoteMessagingRepository.messageFlow().map { message -> message?.takeIf { it.matchesTrigger(activeTrigger) } }
 
+    @OnIo
     override suspend fun onMessageShown(remoteMessage: RemoteMessage) {
-        withContext(dispatchers.io()) {
-            remoteMessagingPixels.fireRemoteMessageShownPixel(remoteMessage)
-            remoteMessagingRepository.markAsShown(remoteMessage)
-        }
+        remoteMessagingPixels.fireRemoteMessageShownPixel(remoteMessage)
+        remoteMessagingRepository.markAsShown(remoteMessage)
     }
 
     override suspend fun onMessageDismissed(remoteMessage: RemoteMessage) {
@@ -93,8 +93,9 @@ class RealRemoteMessageModel @Inject constructor(
         remoteMessagingRepository.clearMessageImage(surface)
     }
 
-    override suspend fun isMessageDismissed(id: String): Boolean = withContext(dispatchers.io()) {
-        remoteMessagingRepository.dismissedMessages().contains(id)
+    @OnIo
+    override suspend fun isMessageDismissed(id: String): Boolean {
+        return remoteMessagingRepository.dismissedMessages().contains(id)
     }
 
     private fun Content.getPrimaryAction(): Action? {

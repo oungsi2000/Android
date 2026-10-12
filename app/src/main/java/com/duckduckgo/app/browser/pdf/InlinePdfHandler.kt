@@ -27,6 +27,7 @@ import androidx.annotation.VisibleForTesting
 import androidx.core.net.toUri
 import com.duckduckgo.browsermode.api.BrowserMode
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.cookies.api.CookieManagerProvider
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
@@ -353,23 +354,24 @@ class RealInlinePdfHandler @Inject constructor(
 
     override fun extractFileName(url: String): String = sanitizeToPdfFileName(url.toUri().lastPathSegment)
 
-    override suspend fun cacheLocalPdf(uri: Uri): LocalPdfResult = withContext(dispatcherProvider.io()) {
+    @OnIo
+    override suspend fun cacheLocalPdf(uri: Uri): LocalPdfResult {
         val displayName = resolveDisplayName(uri)
         // Prefix with the source URI hash so two sources sharing a display name don't collide.
         val targetFile = File(cacheDir, "${uri.toString().hashCode()}-$displayName")
-        try {
+        return try {
             context.contentResolver.openInputStream(uri)?.use { input ->
                 targetFile.outputStream().use { output -> input.copyTo(output) }
             } ?: run {
                 logcat { "Local PDF copy failed: null input stream" }
                 targetFile.delete()
-                return@withContext LocalPdfResult.Failure(PdfErrorType.IO_ERROR)
+                return LocalPdfResult.Failure(PdfErrorType.IO_ERROR)
             }
 
             if (!hasPdfMagicBytes(targetFile)) {
                 logcat { "Local PDF rejected: file does not start with %PDF magic bytes" }
                 targetFile.delete()
-                return@withContext LocalPdfResult.Failure(PdfErrorType.UNKNOWN)
+                return LocalPdfResult.Failure(PdfErrorType.UNKNOWN)
             }
 
             enforceCacheBudget(keepFile = targetFile, maxFiles = MAX_CACHED_FILES)

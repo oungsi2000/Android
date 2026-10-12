@@ -21,8 +21,8 @@ import com.duckduckgo.app.global.rating.AppEnjoymentPromptOptions.ShowNothing
 import com.duckduckgo.app.usage.search.SearchCountDao
 import com.duckduckgo.appbuildconfig.api.AppBuildConfig
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.playstore.PlayStoreUtils
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.INFO
 import logcat.logcat
 
@@ -39,20 +39,19 @@ class InitialPromptTypeDecider(
     private val appBuildConfig: AppBuildConfig,
 ) : PromptTypeDecider {
 
+    @OnIo
     override suspend fun determineInitialPromptType(): AppEnjoymentPromptOptions {
-        return withContext(dispatchers.io()) {
-            if (!isPlayStoreInstalled()) return@withContext ShowNothing
-            if (!wasInstalledThroughPlayStore()) return@withContext ShowNothing
-            if (!enoughSearchesMade()) return@withContext ShowNothing
+        if (!isPlayStoreInstalled()) return ShowNothing
+        if (!wasInstalledThroughPlayStore()) return ShowNothing
+        if (!enoughSearchesMade()) return ShowNothing
 
-            if (initialPromptDecider.shouldShowPrompt()) {
-                logcat(INFO) { "Will show app enjoyment prompt for first time" }
-                return@withContext ShowEnjoymentPrompt(PromptCount.first())
-            }
-
-            logcat(INFO) { "Decided not to show any app enjoyment prompts" }
-            return@withContext ShowNothing
+        if (initialPromptDecider.shouldShowPrompt()) {
+            logcat(INFO) { "Will show app enjoyment prompt for first time" }
+            return ShowEnjoymentPrompt(PromptCount.first())
         }
+
+        logcat(INFO) { "Decided not to show any app enjoyment prompts" }
+        return ShowNothing
     }
 
     private fun isPlayStoreInstalled(): Boolean {

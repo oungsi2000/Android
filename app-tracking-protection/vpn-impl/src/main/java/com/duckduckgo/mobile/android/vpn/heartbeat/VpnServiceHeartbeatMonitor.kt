@@ -25,6 +25,7 @@ import com.duckduckgo.anvil.annotations.ContributesWorker
 import com.duckduckgo.anvil.annotations.InjectWith
 import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.di.scopes.ReceiverScope
 import com.duckduckgo.mobile.android.vpn.dao.HeartBeatEntity
@@ -40,7 +41,6 @@ import dagger.Provides
 import dagger.android.AndroidInjection
 import dagger.multibindings.IntoSet
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.WARN
 import logcat.logcat
 import java.util.concurrent.TimeUnit
@@ -104,7 +104,8 @@ class VpnServiceHeartbeatMonitorWorker(
     @Inject
     lateinit var vpnServiceStateStatsDao: VpnServiceStateStatsDao
 
-    override suspend fun doWork(): Result = withContext(dispatcherProvider.io()) {
+    @OnIo
+    override suspend fun doWork(): Result {
         val lastHeartBeat = vpnHeartBeatDao.hearBeats().maxByOrNull { it.timestamp }
 
         logcat { "HB monitor checking last HB: $lastHeartBeat" }
@@ -125,7 +126,7 @@ class VpnServiceHeartbeatMonitorWorker(
             TrackerBlockingVpnService.startService(context)
         }
 
-        return@withContext Result.success()
+        return Result.success()
     }
 
     private fun HeartBeatEntity.isAlive(): Boolean {

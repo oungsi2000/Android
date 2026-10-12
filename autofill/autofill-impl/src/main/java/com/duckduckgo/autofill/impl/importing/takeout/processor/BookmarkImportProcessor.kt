@@ -24,11 +24,11 @@ import com.duckduckgo.autofill.impl.importing.takeout.zip.TakeoutBookmarkExtract
 import com.duckduckgo.autofill.impl.importing.takeout.zip.TakeoutBookmarkExtractor.ExtractionResult
 import com.duckduckgo.autofill.impl.importing.takeout.zip.TakeoutZipDownloader
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.savedsites.api.service.ImportSavedSitesResult
 import com.duckduckgo.savedsites.api.service.SavedSitesImporter.ImportFolder
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.WARN
 import logcat.asLog
 import logcat.logcat
@@ -64,20 +64,20 @@ class TakeoutBookmarkImportProcessor @Inject constructor(
     private val bookmarkExtractor: TakeoutBookmarkExtractor,
     private val takeoutBookmarkImporter: TakeoutBookmarkImporter,
 ) : BookmarkImportProcessor {
+    @OnIo
     override suspend fun downloadAndImportFromTakeoutZipUrl(
         url: String,
         userAgent: String,
         folderName: String,
-    ): ImportResult =
-        withContext(dispatchers.io()) {
-            runCatching {
-                val zipUri = takeoutZipDownloader.downloadZip(url, userAgent)
-                processBookmarkZip(zipUri, folderName)
-            }.getOrElse { e ->
-                logcat(WARN) { "Bookmark zip download failed: ${e.asLog()}" }
-                Error.DownloadError
-            }
+    ): ImportResult {
+        return runCatching {
+            val zipUri = takeoutZipDownloader.downloadZip(url, userAgent)
+            processBookmarkZip(zipUri, folderName)
+        }.getOrElse { e ->
+            logcat(WARN) { "Bookmark zip download failed: ${e.asLog()}" }
+            Error.DownloadError
         }
+    }
 
     private suspend fun processBookmarkZip(
         zipUri: Uri,

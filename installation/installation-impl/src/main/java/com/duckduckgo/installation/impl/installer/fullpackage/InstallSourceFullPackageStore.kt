@@ -21,6 +21,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.installation.impl.installer.di.InstallerModule.InstallSourceFullPackageDataStore
 import com.duckduckgo.installation.impl.installer.fullpackage.InstallSourceFullPackageStore.IncludedPackages
@@ -29,7 +30,6 @@ import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface InstallSourceFullPackageStore {
@@ -52,20 +52,18 @@ class InstallSourceFullPackageStoreImpl @Inject constructor(
     @InstallSourceFullPackageDataStore private val dataStore: DataStore<Preferences>,
 ) : InstallSourceFullPackageStore {
 
+    @OnIo
     override suspend fun updateInstallSourceFullPackages(json: String) {
-        withContext(dispatchers.io()) {
-            val includedPackages = jsonParser.parseJson(json)
-            dataStore.edit {
-                it[packageInstallersKey] = includedPackages.list.toSet()
-            }
+        val includedPackages = jsonParser.parseJson(json)
+        dataStore.edit {
+            it[packageInstallersKey] = includedPackages.list.toSet()
         }
     }
 
+    @OnIo
     override suspend fun getInstallSourceFullPackages(): IncludedPackages {
-        return withContext(dispatchers.io()) {
-            val packageInstallers = dataStore.data.map { it[packageInstallersKey] }.firstOrNull()
-            return@withContext IncludedPackages(packageInstallers?.toList() ?: emptyList())
-        }
+        val packageInstallers = dataStore.data.map { it[packageInstallersKey] }.firstOrNull()
+        return IncludedPackages(packageInstallers?.toList() ?: emptyList())
     }
 
     companion object {

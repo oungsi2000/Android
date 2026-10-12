@@ -17,7 +17,7 @@
 package com.duckduckgo.remote.messaging.store
 
 import com.duckduckgo.common.utils.DispatcherProvider
-import kotlinx.coroutines.withContext
+import com.duckduckgo.common.utils.OnIo
 import kotlin.random.Random
 
 interface RemoteMessagingCohortStore {
@@ -31,17 +31,16 @@ class RemoteMessagingCohortStoreImpl constructor(
 
     private val cohortDao: RemoteMessagingCohortDao = database.remoteMessagingCohortDao()
 
+    @OnIo
     override suspend fun getPercentile(remoteMessageId: String): Float {
-        return withContext(dispatchers.io()) {
-            val cohort = cohortDao.messageById(remoteMessageId)
-            if (cohort == null) {
-                val percentile = calculatePercentile()
-                val remoteMessagingCohort = RemoteMessagingCohort(messageId = remoteMessageId, percentile = percentile)
-                cohortDao.insert(remoteMessagingCohort)
-                return@withContext percentile
-            } else {
-                return@withContext cohort.percentile
-            }
+        val cohort = cohortDao.messageById(remoteMessageId)
+        return if (cohort == null) {
+            val percentile = calculatePercentile()
+            val remoteMessagingCohort = RemoteMessagingCohort(messageId = remoteMessageId, percentile = percentile)
+            cohortDao.insert(remoteMessagingCohort)
+            return percentile
+        } else {
+            return cohort.percentile
         }
     }
 

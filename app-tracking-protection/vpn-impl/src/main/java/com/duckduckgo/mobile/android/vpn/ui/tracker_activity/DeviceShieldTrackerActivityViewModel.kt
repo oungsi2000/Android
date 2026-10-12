@@ -22,6 +22,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.duckduckgo.anvil.annotations.ContributesViewModel
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.formatters.time.model.dateOfLastWeek
 import com.duckduckgo.di.scopes.ActivityScope
 import com.duckduckgo.mobile.android.vpn.AppTpVpnFeature
@@ -37,7 +38,6 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.*
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -59,21 +59,24 @@ class DeviceShieldTrackerActivityViewModel @Inject constructor(
 
     private var lastVpnRequestTime = -1L
 
-    internal suspend fun getRunningState(): Flow<VpnState> = withContext(dispatcherProvider.io()) {
-        return@withContext vpnStateMonitor
+    @OnIo
+    internal suspend fun getRunningState(): Flow<VpnState> {
+        return vpnStateMonitor
             .getStateFlow(AppTpVpnFeature.APPTP_VPN)
             // we only cared about enabled and disabled states for AppTP
             .filter { (it.state == VpnStateMonitor.VpnRunningState.ENABLED) || (it.state == VpnStateMonitor.VpnRunningState.DISABLED) }
             .combine(refreshVpnRunningState.asStateFlow()) { state, _ -> state }
     }
 
-    internal suspend fun getTrackingAppsCount(): Flow<TrackingAppCount> = withContext(dispatcherProvider.io()) {
-        return@withContext appTrackerBlockingStatsRepository.getTrackingAppsCountBetween({ dateOfLastWeek() })
+    @OnIo
+    internal suspend fun getTrackingAppsCount(): Flow<TrackingAppCount> {
+        return appTrackerBlockingStatsRepository.getTrackingAppsCountBetween({ dateOfLastWeek() })
             .map { TrackingAppCount(it) }
     }
 
-    internal suspend fun getBlockedTrackersCount(): Flow<TrackerCount> = withContext(dispatcherProvider.io()) {
-        return@withContext appTrackerBlockingStatsRepository.getBlockedTrackersCountBetween({ dateOfLastWeek() })
+    @OnIo
+    internal suspend fun getBlockedTrackersCount(): Flow<TrackerCount> {
+        return appTrackerBlockingStatsRepository.getBlockedTrackersCountBetween({ dateOfLastWeek() })
             .map { TrackerCount(it) }
     }
 

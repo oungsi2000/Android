@@ -25,10 +25,10 @@ import com.duckduckgo.app.statistics.wideevents.WideEventDefinition.Version
 import com.duckduckgo.browser.feature.toggles.AndroidBrowserConfigFeature
 import com.duckduckgo.browsermode.api.BrowserMode
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -209,8 +209,9 @@ class DataClearingWideEventImpl @Inject constructor(
         cachedFlowId = null
     }
 
-    private suspend fun isFeatureEnabled(): Boolean = withContext(dispatchers.io()) {
-        androidBrowserConfigFeature.sendDataClearingWideEvent().isEnabled()
+    @OnIo
+    private suspend fun isFeatureEnabled(): Boolean {
+        return androidBrowserConfigFeature.sendDataClearingWideEvent().isEnabled()
     }
 
     private fun Set<FireClearOption>.asMetadataValue(): String {

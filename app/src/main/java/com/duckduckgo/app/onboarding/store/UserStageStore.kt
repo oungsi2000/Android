@@ -18,9 +18,9 @@ package com.duckduckgo.app.onboarding.store
 
 import com.duckduckgo.browser.feature.toggles.AndroidBrowserConfigFeature
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.DEBUG
 import logcat.logcat
 import javax.inject.Inject
@@ -43,36 +43,34 @@ class AppUserStageStore @Inject constructor(
         return userStageDao.currentUserAppStageFlow().map { it?.appStage ?: AppStage.NEW }
     }
 
+    @OnIo
     override suspend fun getUserAppStage(): AppStage {
-        return withContext(dispatcher.io()) {
-            val userStage = userStageDao.currentUserAppStage()
-            return@withContext userStage?.appStage ?: AppStage.NEW
-        }
+        val userStage = userStageDao.currentUserAppStage()
+        return userStage?.appStage ?: AppStage.NEW
     }
 
+    @OnIo
     override suspend fun stageCompleted(appStage: AppStage): AppStage {
-        return withContext(dispatcher.io()) {
-            val currentStage = getUserAppStage()
-            if (currentStage == AppStage.ESTABLISHED &&
-                androidBrowserConfigFeature.establishedAppStageGuard().isEnabled()
-            ) {
-                logcat(DEBUG) { "UserStageStore: User is already ESTABLISHED, returning ESTABLISHED" }
-                return@withContext AppStage.ESTABLISHED
-            }
-
-            val newAppStage = when (appStage) {
-                AppStage.NEW -> AppStage.DAX_ONBOARDING
-                AppStage.DAX_ONBOARDING -> AppStage.ESTABLISHED
-                AppStage.ESTABLISHED -> AppStage.ESTABLISHED
-            }
-
-            if (newAppStage != appStage) {
-                logcat(DEBUG) { "UserStageStore: currentStage=$currentStage, newAppStage=$newAppStage" }
-                userStageDao.updateUserStage(newAppStage)
-            }
-
-            return@withContext newAppStage
+        val currentStage = getUserAppStage()
+        if (currentStage == AppStage.ESTABLISHED &&
+            androidBrowserConfigFeature.establishedAppStageGuard().isEnabled()
+        ) {
+            logcat(DEBUG) { "UserStageStore: User is already ESTABLISHED, returning ESTABLISHED" }
+            return AppStage.ESTABLISHED
         }
+
+        val newAppStage = when (appStage) {
+            AppStage.NEW -> AppStage.DAX_ONBOARDING
+            AppStage.DAX_ONBOARDING -> AppStage.ESTABLISHED
+            AppStage.ESTABLISHED -> AppStage.ESTABLISHED
+        }
+
+        if (newAppStage != appStage) {
+            logcat(DEBUG) { "UserStageStore: currentStage=$currentStage, newAppStage=$newAppStage" }
+            userStageDao.updateUserStage(newAppStage)
+        }
+
+        return newAppStage
     }
 
     override suspend fun moveToStage(appStage: AppStage) {

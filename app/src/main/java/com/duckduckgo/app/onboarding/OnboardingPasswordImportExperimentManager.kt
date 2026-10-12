@@ -22,10 +22,10 @@ import com.duckduckgo.app.onboardingbranddesignupdate.OnboardingBrandDesignUpdat
 import com.duckduckgo.appbuildconfig.api.AppBuildConfig
 import com.duckduckgo.autofill.api.ImportPasswordsFromGoogle
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface OnboardingPasswordImportExperimentManager {
@@ -49,8 +49,9 @@ class OnboardingPasswordImportExperimentManagerImpl @Inject constructor(
     private val onboardingPrivacyConfigPersistedGate: OnboardingPrivacyConfigPersistedGate,
 ) : OnboardingPasswordImportExperimentManager {
 
-    override suspend fun enroll(): OnboardingPasswordImportVariant? = withContext(dispatcherProvider.io()) {
-        if (onboardingPrivacyConfigPersistedGate.awaitPersisted() && checkPrerequisites()) {
+    @OnIo
+    override suspend fun enroll(): OnboardingPasswordImportVariant? {
+        return if (onboardingPrivacyConfigPersistedGate.awaitPersisted() && checkPrerequisites()) {
             val toggle = toggles.passwordImportExperimentAug25()
             toggle.enroll()
             when {

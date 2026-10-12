@@ -19,6 +19,7 @@ package com.duckduckgo.duckchat.impl.terms
 import com.duckduckgo.browsermode.api.BrowserMode
 import com.duckduckgo.browsermode.api.BrowserModeDataProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.duckchat.store.impl.DuckAiBridgeStorage
 import com.duckduckgo.duckchat.store.impl.store.DuckAiBridgeSettingEntity
@@ -27,7 +28,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
@@ -52,10 +52,9 @@ class RealDuckAiTermsRepository @Inject constructor(
             .distinctUntilChanged()
             .flowOn(dispatchers.io())
 
+    @OnIo
     override suspend fun markTermsAccepted(browserMode: BrowserMode) {
-        withContext(dispatchers.io()) {
-            storageProvider.forMode(browserMode).settings.upsert(DuckAiBridgeSettingEntity(key = TERMS_KEY, value = ACCEPTED))
-        }
+        storageProvider.forMode(browserMode).settings.upsert(DuckAiBridgeSettingEntity(key = TERMS_KEY, value = ACCEPTED))
     }
 
     private companion object {

@@ -22,6 +22,7 @@ import com.duckduckgo.app.statistics.wideevents.CleanupPolicy
 import com.duckduckgo.app.statistics.wideevents.FlowStatus
 import com.duckduckgo.app.statistics.wideevents.WideEventClient
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.duckchat.impl.feature.DuckChatFeature
 import com.squareup.anvil.annotations.ContributesBinding
@@ -29,7 +30,6 @@ import dagger.Lazy
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.days
 
@@ -115,8 +115,9 @@ class InputScreenOnboardingWideEventImpl @Inject constructor(
         }
     }
 
-    private suspend fun isFeatureEnabled(): Boolean = withContext(dispatchers.io()) {
-        duckChatFeature.get().sendInputScreenOnboardingWideEvent().isEnabled()
+    @OnIo
+    private suspend fun isFeatureEnabled(): Boolean {
+        return duckChatFeature.get().sendInputScreenOnboardingWideEvent().isEnabled()
     }
 
     private suspend fun getCurrentWideEventId(): Long? {

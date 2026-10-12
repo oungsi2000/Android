@@ -18,10 +18,10 @@ package com.duckduckgo.pir.impl.brokers
 
 import android.content.Context
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.pir.impl.service.DbpService
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
 import logcat.logcat
 import okio.FileSystem.Companion.SYSTEM
@@ -50,28 +50,27 @@ class RealBrokerDataDownloader @Inject constructor(
     private val brokerJsonProcessor: BrokerJsonProcessor,
 ) : BrokerDataDownloader {
 
+    @OnIo
     override suspend fun downloadBrokerData(brokersToUpdate: List<String>) {
-        withContext(dispatcherProvider.io()) {
-            if (brokersToUpdate.isNotEmpty()) {
-                logcat { "PIR-update: Starting to download broker data" }
-                val extractFolder = File(context.filesDir, "unzipped-broker-json")
-                val zipFile = File.createTempFile("broker-data", ".zip", context.cacheDir)
-                try {
-                    dbpService.getBrokerJsonFiles().use { body ->
-                        body.byteStream().use { input ->
-                            zipFile.outputStream().use { input.copyTo(it) }
-                        }
-                    }
-                    extractJsonFilesFromZip(zipFile, extractFolder)
-                    processBrokerJsonFiles(extractFolder, brokersToUpdate)
-                } finally {
-                    zipFile.delete()
-                    if (extractFolder.exists()) {
-                        SYSTEM.deleteRecursively(extractFolder.path.toPath())
+        if (brokersToUpdate.isNotEmpty()) {
+            logcat { "PIR-update: Starting to download broker data" }
+            val extractFolder = File(context.filesDir, "unzipped-broker-json")
+            val zipFile = File.createTempFile("broker-data", ".zip", context.cacheDir)
+            try {
+                dbpService.getBrokerJsonFiles().use { body ->
+                    body.byteStream().use { input ->
+                        zipFile.outputStream().use { input.copyTo(it) }
                     }
                 }
-                logcat { "PIR-update: Done downloading broker data" }
+                extractJsonFilesFromZip(zipFile, extractFolder)
+                processBrokerJsonFiles(extractFolder, brokersToUpdate)
+            } finally {
+                zipFile.delete()
+                if (extractFolder.exists()) {
+                    SYSTEM.deleteRecursively(extractFolder.path.toPath())
+                }
             }
+            logcat { "PIR-update: Done downloading broker data" }
         }
     }
 

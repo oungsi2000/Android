@@ -24,10 +24,10 @@ import android.os.Environment
 import android.provider.MediaStore
 import androidx.annotation.RequiresApi
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import java.io.File
 import java.io.IOException
@@ -62,22 +62,22 @@ class RealCachedFileDownloader @Inject constructor(
     private val dispatcherProvider: DispatcherProvider,
 ) : CachedFileDownloader {
 
-    override suspend fun saveToDownloads(cachedFileUri: Uri, fileName: String, mimeType: String): String? =
-        withContext(dispatcherProvider.io()) {
-            try {
-                if (Build.VERSION.SDK_INT >= 29) {
-                    saveViaMediaStore(cachedFileUri, fileName, mimeType)
-                } else {
-                    saveDirectly(cachedFileUri, fileName)
-                }
-            } catch (e: IOException) {
-                logcat { "CachedFileDownloader save failed: ${e.message}" }
-                null
-            } catch (e: SecurityException) {
-                logcat { "CachedFileDownloader save denied: ${e.message}" }
-                null
+    @OnIo
+    override suspend fun saveToDownloads(cachedFileUri: Uri, fileName: String, mimeType: String): String? {
+        return try {
+            if (Build.VERSION.SDK_INT >= 29) {
+                saveViaMediaStore(cachedFileUri, fileName, mimeType)
+            } else {
+                saveDirectly(cachedFileUri, fileName)
             }
+        } catch (e: IOException) {
+            logcat { "CachedFileDownloader save failed: ${e.message}" }
+            null
+        } catch (e: SecurityException) {
+            logcat { "CachedFileDownloader save denied: ${e.message}" }
+            null
         }
+    }
 
     @RequiresApi(29)
     private fun saveViaMediaStore(cachedFileUri: Uri, fileName: String, mimeType: String): String? {

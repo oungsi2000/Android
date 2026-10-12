@@ -21,6 +21,7 @@ import androidx.core.net.toUri
 import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.app.di.IsMainProcess
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.domain
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
@@ -30,7 +31,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @ContributesBinding(AppScope::class)
@@ -67,16 +67,14 @@ class RealUserAllowListRepository @Inject constructor(
             .distinctUntilChanged()
     }
 
+    @OnIo
     override suspend fun addDomainToUserAllowList(domain: String) {
-        withContext(dispatcherProvider.io()) {
-            userAllowListDao.insert(domain)
-        }
+        userAllowListDao.insert(domain)
     }
 
+    @OnIo
     override suspend fun removeDomainFromUserAllowList(domain: String) {
-        withContext(dispatcherProvider.io()) {
-            userAllowListDao.delete(domain)
-        }
+        userAllowListDao.delete(domain)
     }
 
     init {

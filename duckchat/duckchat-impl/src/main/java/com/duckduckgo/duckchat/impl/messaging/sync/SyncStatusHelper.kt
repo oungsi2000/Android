@@ -17,9 +17,9 @@
 package com.duckduckgo.duckchat.impl.messaging.sync
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.sync.api.DeviceSyncState
 import com.duckduckgo.sync.api.DeviceSyncState.SyncAccountState.SignedIn
-import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import javax.inject.Inject
 
@@ -30,9 +30,10 @@ class SyncStatusHelper @Inject constructor(
     private val deviceSyncState: DeviceSyncState,
     private val dispatcherProvider: DispatcherProvider,
 ) {
-    suspend fun buildSyncStatusPayload(): JSONObject = withContext(dispatcherProvider.io()) {
+    @OnIo
+    suspend fun buildSyncStatusPayload(): JSONObject {
         val syncAvailable = deviceSyncState.isFeatureEnabled()
-        when (val accountState = deviceSyncState.getAccountState()) {
+        return when (val accountState = deviceSyncState.getAccountState()) {
             is SignedIn -> {
                 // Find this device in the list of connected devices
                 val thisDevice = accountState.devices.firstOrNull { it.thisDevice }

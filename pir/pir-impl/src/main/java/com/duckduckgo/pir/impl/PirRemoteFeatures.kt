@@ -18,6 +18,7 @@ package com.duckduckgo.pir.impl
 
 import com.duckduckgo.anvil.annotations.ContributesRemoteFeature
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.feature.toggles.api.Toggle
 import com.duckduckgo.feature.toggles.api.Toggle.DefaultFeatureValue
@@ -28,7 +29,6 @@ import com.duckduckgo.pir.api.dashboard.PirFeatureState
 import com.duckduckgo.pir.impl.store.PirRepository
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @ContributesRemoteFeature(
@@ -81,17 +81,18 @@ class PirRemoteFeatureImpl @Inject constructor(
     private val pirRepository: PirRepository,
 ) : PirFeature {
 
-    override suspend fun getPirFeatureState(): PirFeatureState = withContext(dispatcherProvider.io()) {
+    @OnIo
+    override suspend fun getPirFeatureState(): PirFeatureState {
         val isEnabled = pirRemoteFeatures.pirBeta().isEnabled()
         if (!isEnabled) {
-            return@withContext PirFeatureState.DISABLED
+            return PirFeatureState.DISABLED
         }
 
         val isRepositoryAvailable = pirRepository.isRepositoryAvailable()
         if (!isRepositoryAvailable) {
-            return@withContext PirFeatureState.NOT_AVAILABLE
+            return PirFeatureState.NOT_AVAILABLE
         }
 
-        return@withContext PirFeatureState.ENABLED
+        return PirFeatureState.ENABLED
     }
 }

@@ -38,6 +38,7 @@ import com.duckduckgo.autofill.impl.importing.takeout.webflow.UserCannotImportRe
 import com.duckduckgo.autofill.impl.store.ReAuthenticationDetails
 import com.duckduckgo.autofill.impl.store.ReauthenticationHandler
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.FragmentScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -166,19 +167,19 @@ class ImportGoogleBookmarksWebFlowViewModel @Inject constructor(
         _viewState.value = ShowWebPage
     }
 
-    suspend fun getReauthData(originalUrl: String): ReAuthenticationDetails? =
-        withContext(dispatchers.io()) {
-            if (canReAuthenticate()) {
-                reauthenticationHandler.retrieveReauthData(originalUrl)
-            } else {
-                null
-            }
+    @OnIo
+    suspend fun getReauthData(originalUrl: String): ReAuthenticationDetails? {
+        return if (canReAuthenticate()) {
+            reauthenticationHandler.retrieveReauthData(originalUrl)
+        } else {
+            null
         }
+    }
 
-    private suspend fun canReAuthenticate(): Boolean =
-        withContext(dispatchers.io()) {
-            autofillFeature.canReAuthenticateGoogleLoginsAutomatically().isEnabled()
-        }
+    @OnIo
+    private suspend fun canReAuthenticate(): Boolean {
+        return autofillFeature.canReAuthenticateGoogleLoginsAutomatically().isEnabled()
+    }
 
     fun onStoredCredentialsAvailable(
         originalUrl: String,

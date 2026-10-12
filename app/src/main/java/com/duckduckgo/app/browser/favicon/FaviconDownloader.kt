@@ -29,9 +29,9 @@ import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.duckduckgo.browser.feature.toggles.AndroidBrowserConfigFeature
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 
@@ -74,29 +74,32 @@ class GlideFaviconDownloader @Inject constructor(
             .diskCacheStrategy(DiskCacheStrategy.NONE)
             .skipMemoryCache(true)
 
-    override suspend fun getFaviconFromDisk(file: File): Bitmap? = withContext(dispatcherProvider.io()) {
-        if (androidBrowserConfigFeature.glideSuspend().isEnabled()) {
+    @OnIo
+    override suspend fun getFaviconFromDisk(file: File): Bitmap? {
+        return if (androidBrowserConfigFeature.glideSuspend().isEnabled()) {
             getFaviconFromDiskAsync(file)
         } else {
             getFaviconFromDiskSync(file)
         }
     }
 
+    @OnIo
     override suspend fun getFaviconFromDisk(
         file: File,
         cornerRadius: Int,
         width: Int,
         height: Int,
-    ): Bitmap? = withContext(dispatcherProvider.io()) {
-        if (androidBrowserConfigFeature.glideSuspend().isEnabled()) {
+    ): Bitmap? {
+        return if (androidBrowserConfigFeature.glideSuspend().isEnabled()) {
             getFaviconFromDiskAsync(file, cornerRadius, width, height)
         } else {
             getFaviconFromDiskSync(file, cornerRadius, width, height)
         }
     }
 
-    override suspend fun getFaviconFromUrl(uri: Uri): Bitmap? = withContext(dispatcherProvider.io()) {
-        if (androidBrowserConfigFeature.glideSuspend().isEnabled()) {
+    @OnIo
+    override suspend fun getFaviconFromUrl(uri: Uri): Bitmap? {
+        return if (androidBrowserConfigFeature.glideSuspend().isEnabled()) {
             getFaviconFromUrlAsync(uri)
         } else {
             getFaviconFromUrlSync(uri)

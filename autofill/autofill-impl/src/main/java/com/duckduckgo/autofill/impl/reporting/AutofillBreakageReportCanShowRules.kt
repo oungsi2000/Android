@@ -21,9 +21,9 @@ import com.duckduckgo.autofill.impl.reporting.remoteconfig.AutofillSiteBreakageR
 import com.duckduckgo.autofill.impl.time.TimeProvider
 import com.duckduckgo.autofill.impl.urlmatcher.AutofillUrlMatcher
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -42,17 +42,16 @@ class AutofillBreakageReportCanShowRulesImpl @Inject constructor(
 
 ) : AutofillBreakageReportCanShowRules {
 
+    @OnIo
     override suspend fun canShowForSite(url: String): Boolean {
-        return withContext(dispatchers.io()) {
-            if (!featureEnabledInRemoteConfig()) return@withContext false
+        if (!featureEnabledInRemoteConfig()) return false
 
-            val eTldPlusOne = urlMatcher.extractUrlPartsForAutofill(url).eTldPlus1 ?: return@withContext false
+        val eTldPlusOne = urlMatcher.extractUrlPartsForAutofill(url).eTldPlus1 ?: return false
 
-            if (eTldPlusOne.isInExceptionList()) return@withContext false
-            if (eTldPlusOne.siteReportSentRecently()) return@withContext false
+        if (eTldPlusOne.isInExceptionList()) return false
+        if (eTldPlusOne.siteReportSentRecently()) return false
 
-            true
-        }
+        return true
     }
 
     private fun String.isInExceptionList() = exceptionsRepository.exceptions.contains(this)

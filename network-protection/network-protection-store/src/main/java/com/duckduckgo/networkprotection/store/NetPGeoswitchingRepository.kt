@@ -17,11 +17,11 @@
 package com.duckduckgo.networkprotection.store
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.networkprotection.store.NetPGeoswitchingRepository.UserPreferredLocation
 import com.duckduckgo.networkprotection.store.db.NetPGeoswitchingDao
 import com.duckduckgo.networkprotection.store.db.NetPGeoswitchingLocation
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.withContext
 
 interface NetPGeoswitchingRepository {
 
@@ -46,20 +46,18 @@ class RealNetPGeoswitchingRepository constructor(
     private val netPGeoswitchingDao: NetPGeoswitchingDao,
     private val dispatcherProvider: DispatcherProvider,
 ) : NetPGeoswitchingRepository {
+    @OnIo
     override suspend fun getUserPreferredLocation(): UserPreferredLocation {
-        return withContext(dispatcherProvider.io()) {
-            UserPreferredLocation(
-                countryCode = networkProtectionPrefs.getString(KEY_PREFERRED_COUNTRY, null),
-                cityName = networkProtectionPrefs.getString(KEY_PREFERRED_CITY, null),
-            )
-        }
+        return UserPreferredLocation(
+            countryCode = networkProtectionPrefs.getString(KEY_PREFERRED_COUNTRY, null),
+            cityName = networkProtectionPrefs.getString(KEY_PREFERRED_CITY, null),
+        )
     }
 
+    @OnIo
     override suspend fun setUserPreferredLocation(userPreferredLocation: UserPreferredLocation) {
-        withContext(dispatcherProvider.io()) {
-            networkProtectionPrefs.putString(KEY_PREFERRED_COUNTRY, userPreferredLocation.countryCode)
-            networkProtectionPrefs.putString(KEY_PREFERRED_CITY, userPreferredLocation.cityName)
-        }
+        networkProtectionPrefs.putString(KEY_PREFERRED_COUNTRY, userPreferredLocation.countryCode)
+        networkProtectionPrefs.putString(KEY_PREFERRED_CITY, userPreferredLocation.cityName)
     }
 
     override fun getLocations(): List<NetPGeoswitchingLocation> = netPGeoswitchingDao.getLocations()

@@ -20,10 +20,10 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface AutofillSurveyStore {
@@ -46,46 +46,41 @@ class AutofillSurveyStoreImpl @Inject constructor(
         context.getSharedPreferences(PREFS_FILE_NAME, Context.MODE_PRIVATE)
     }
 
+    @OnIo
     override suspend fun hasSurveyBeenTaken(id: String): Boolean {
-        return withContext(dispatchers.io()) {
-            val previousSurveys = prefs.getStringSet(SURVEY_IDS, mutableSetOf()) ?: mutableSetOf()
-            previousSurveys.contains(id)
-        }
+        val previousSurveys = prefs.getStringSet(SURVEY_IDS, mutableSetOf()) ?: mutableSetOf()
+        return previousSurveys.contains(id)
     }
 
+    @OnIo
     override suspend fun recordSurveyWasShown(id: String) {
-        withContext(dispatchers.io()) {
-            val currentValue = prefs.getStringSet(SURVEY_IDS, mutableSetOf()) ?: mutableSetOf()
-            val newValue = currentValue.toMutableSet()
-            newValue.add(id)
-            prefs.edit {
-                putStringSet(SURVEY_IDS, newValue)
-            }
+        val currentValue = prefs.getStringSet(SURVEY_IDS, mutableSetOf()) ?: mutableSetOf()
+        val newValue = currentValue.toMutableSet()
+        newValue.add(id)
+        prefs.edit {
+            putStringSet(SURVEY_IDS, newValue)
         }
     }
 
+    @OnIo
     override suspend fun resetPreviousSurveys() {
-        withContext(dispatchers.io()) {
-            prefs.edit {
-                remove(SURVEY_IDS)
-            }
+        prefs.edit {
+            remove(SURVEY_IDS)
         }
     }
 
+    @OnIo
     override suspend fun availableSurveys(): List<SurveyDetails> {
-        return withContext(dispatchers.io()) {
-            kotlin.runCatching {
-                val availableSurveyJson = prefs.getString(AVAILABLE_SURVEYS, null)
-                surveyJsonParser.parseJson(availableSurveyJson)
-            }.getOrElse { emptyList() }
-        }
+        return kotlin.runCatching {
+            val availableSurveyJson = prefs.getString(AVAILABLE_SURVEYS, null)
+            surveyJsonParser.parseJson(availableSurveyJson)
+        }.getOrElse { emptyList() }
     }
 
+    @OnIo
     override suspend fun updateAvailableSurveys(json: String) {
-        withContext(dispatchers.io()) {
-            prefs.edit {
-                putString(AVAILABLE_SURVEYS, json)
-            }
+        prefs.edit {
+            putString(AVAILABLE_SURVEYS, json)
         }
     }
 

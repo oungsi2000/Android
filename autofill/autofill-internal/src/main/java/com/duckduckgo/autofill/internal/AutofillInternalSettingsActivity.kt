@@ -70,6 +70,7 @@ import com.duckduckgo.common.ui.view.dialog.TextAlertDialogBuilder
 import com.duckduckgo.common.ui.viewbinding.viewBinding
 import com.duckduckgo.common.utils.ConflatedJob
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.edgetoedge.EdgeToEdgeHandler
 import com.duckduckgo.common.utils.extensions.launchAutofillProviderSystemSettings
 import com.duckduckgo.credentialexchange.api.CredentialExchangeLauncher
@@ -687,10 +688,9 @@ class AutofillInternalSettingsActivity : DuckDuckGoActivity() {
             Pair(getString(R.string.autofillDevSettingsOverrideMaxInstalledOptionAlways), Int.MAX_VALUE),
         )
 
+    @OnIo
     private suspend fun List<LoginCredentials>.save() {
-        withContext(dispatchers.io()) {
-            autofillStore.bulkInsert(this@save)
-        }
+        autofillStore.bulkInsert(this@save)
     }
 
     private fun sampleCredentials(

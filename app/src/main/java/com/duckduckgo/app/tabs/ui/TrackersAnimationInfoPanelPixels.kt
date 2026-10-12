@@ -22,9 +22,9 @@ import com.duckduckgo.app.pixels.AppPixelName.TAB_MANAGER_INFO_PANEL_TAPPED
 import com.duckduckgo.app.statistics.pixels.Pixel
 import com.duckduckgo.app.trackerdetection.WebTrackersBlockedHistory
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.ActivityScope
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
@@ -51,27 +51,26 @@ class TrackersAnimationInfoPanelPixelsImpl @Inject constructor(
         pixel.fire(pixel = TAB_MANAGER_INFO_PANEL_IMPRESSIONS)
     }
 
+    @OnIo
     override suspend fun fireInfoPanelDismissed() {
-        withContext(dispatcherProvider.io()) {
-            val trackerCount = webTrackersBlockedHistory.trackerCountForLast7Days()
-            val bucketSize: Int = when (trackerCount) {
-                0 -> BUCKET_SIZE_0
-                in 1..9 -> BUCKET_SIZE_1
-                in 10..24 -> BUCKET_SIZE_10
-                in 25..49 -> BUCKET_SIZE_25
-                in 50..74 -> BUCKET_SIZE_50
-                in 75..99 -> BUCKET_SIZE_75
-                in 100..149 -> BUCKET_SIZE_100
-                in 150..199 -> BUCKET_SIZE_150
-                in 200..499 -> BUCKET_SIZE_200
-                else -> BUCKET_SIZE_500
-            }
-
-            pixel.fire(
-                pixel = TAB_MANAGER_INFO_PANEL_DISMISSED,
-                parameters = mapOf("trackerCount" to bucketSize.toString()),
-            )
+        val trackerCount = webTrackersBlockedHistory.trackerCountForLast7Days()
+        val bucketSize: Int = when (trackerCount) {
+            0 -> BUCKET_SIZE_0
+            in 1..9 -> BUCKET_SIZE_1
+            in 10..24 -> BUCKET_SIZE_10
+            in 25..49 -> BUCKET_SIZE_25
+            in 50..74 -> BUCKET_SIZE_50
+            in 75..99 -> BUCKET_SIZE_75
+            in 100..149 -> BUCKET_SIZE_100
+            in 150..199 -> BUCKET_SIZE_150
+            in 200..499 -> BUCKET_SIZE_200
+            else -> BUCKET_SIZE_500
         }
+
+        pixel.fire(
+            pixel = TAB_MANAGER_INFO_PANEL_DISMISSED,
+            parameters = mapOf("trackerCount" to bucketSize.toString()),
+        )
     }
 
     companion object {

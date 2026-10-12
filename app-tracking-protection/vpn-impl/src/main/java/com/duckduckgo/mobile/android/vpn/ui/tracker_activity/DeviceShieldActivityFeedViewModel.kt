@@ -19,6 +19,7 @@ package com.duckduckgo.mobile.android.vpn.ui.tracker_activity
 import androidx.lifecycle.*
 import com.duckduckgo.anvil.annotations.ContributesViewModel
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.formatters.time.TimeDiffFormatter
 import com.duckduckgo.di.scopes.FragmentScope
 import com.duckduckgo.mobile.android.vpn.AppTpVpnFeature
@@ -91,17 +92,19 @@ class DeviceShieldActivityFeedViewModel @Inject constructor(
         }
     }
 
-    private suspend fun getRunningState(): Flow<VpnState> = withContext(dispatcherProvider.io()) {
-        return@withContext vpnStateMonitor
+    @OnIo
+    private suspend fun getRunningState(): Flow<VpnState> {
+        return vpnStateMonitor
             .getStateFlow(AppTpVpnFeature.APPTP_VPN)
     }
 
+    @OnIo
     suspend fun getMostRecentTrackers(
         timeWindow: TimeWindow,
         config: DeviceShieldActivityFeedFragment.ActivityFeedConfig,
-    ): Flow<TrackerFeedViewState> = withContext(dispatcherProvider.io()) {
+    ): Flow<TrackerFeedViewState> {
         val showHeadings = config.showTimeWindowHeadings
-        return@withContext statsRepository.getMostRecentVpnTrackers { timeWindow.asString() }
+        return statsRepository.getMostRecentVpnTrackers { timeWindow.asString() }
             .combine(tickerChannel.asStateFlow()) { trackers, _ -> trackers }
             .map { aggregateDataPerApp(it, showHeadings) }
             .combine(getRunningState()) { trackers, runningState ->
@@ -161,8 +164,9 @@ class DeviceShieldActivityFeedViewModel @Inject constructor(
         val vpnState: VpnState,
     )
 
-    private suspend fun getAppsData(): Flow<AppsProtectionData> = withContext(dispatcherProvider.io()) {
-        return@withContext excludedApps.getAppsAndProtectionInfo().map { list ->
+    @OnIo
+    private suspend fun getAppsData(): Flow<AppsProtectionData> {
+        return excludedApps.getAppsAndProtectionInfo().map { list ->
             val unprotected = list.filter { it.isExcluded }
             val protected = list.filter { !it.isExcluded }
             val unprotectedCount = unprotected.size

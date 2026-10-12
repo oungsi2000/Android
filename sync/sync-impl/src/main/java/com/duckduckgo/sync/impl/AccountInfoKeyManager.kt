@@ -17,6 +17,7 @@
 package com.duckduckgo.sync.impl
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.sync.crypto.SyncLib
 import com.duckduckgo.sync.impl.Result.Error
@@ -31,7 +32,6 @@ import com.duckduckgo.sync.store.ScopedPassword
 import com.duckduckgo.sync.store.SyncStore
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
 import logcat.logcat
 import javax.inject.Inject
@@ -83,11 +83,12 @@ class RealAccountInfoKeyManager @Inject constructor(
     private val accountInfoDdgWrapRepairer: AccountInfoDdgWrapRepairer,
 ) : AccountInfoKeyManager {
 
-    override suspend fun ensureKeyRegistered(): Result<AccountInfoKeyResult> = withContext(dispatchers.io()) {
+    @OnIo
+    override suspend fun ensureKeyRegistered(): Result<AccountInfoKeyResult> {
         val token = syncStore.token.takeUnless { it.isNullOrEmpty() }
-            ?: return@withContext Error(reason = "CreateAccountInfoKey: not signed in")
+            ?: return Error(reason = "CreateAccountInfoKey: not signed in")
         val accountSecretKey = syncStore.secretKey
-            ?: return@withContext Error(reason = "CreateAccountInfoKey: no account secret key")
+            ?: return Error(reason = "CreateAccountInfoKey: no account secret key")
 
         val minted = when (val result = mintUnregistered(accountSecretKey)) {
             is Success -> result.data
@@ -97,13 +98,13 @@ class RealAccountInfoKeyManager @Inject constructor(
                         UnifiedDeviceListPixel.AccountInfoKeyCreateFailureReason.MINT_FAILED,
                     ),
                 )
-                return@withContext result
+                return result
             }
         }
 
         val entries = when (val result = wrapForCredentials(minted)) {
             is Success -> result.data
-            is Error -> return@withContext result
+            is Error -> return result
         }
 
         logcat { "Sync-UnifiedDevices: registering $SYNC_PURPOSE_ACCOUNT_INFO key (kid=${minted.entry.kid}, wraps=${entries.size})" }
@@ -121,7 +122,7 @@ class RealAccountInfoKeyManager @Inject constructor(
         if (registration is Success) {
             registration.data.publicKey?.let { syncStore.accountInfoPublicKey = it.toStoredKey(registration.data.kid) }
         }
-        registration
+        return registration
     }
 
     override fun mintUnregistered(accountSecretKey: String): Result<MintedProtectedKey> =

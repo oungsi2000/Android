@@ -20,10 +20,10 @@ import com.duckduckgo.autofill.api.AutofillFeature
 import com.duckduckgo.autofill.impl.importing.capability.PasswordImportAvailability
 import com.duckduckgo.autofill.impl.store.InternalAutofillStore
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import javax.inject.Inject
 
@@ -41,38 +41,37 @@ class RealInSettingsPasswordImportPromoRules @Inject constructor(
     private val passwordImportAvailability: PasswordImportAvailability,
 ) : InSettingsPasswordImportPromoRules {
 
+    @OnIo
     override suspend fun canShowPromo(): Boolean {
-        return withContext(dispatchers.io()) {
-            if (featureEnabled().not()) {
-                return@withContext false
-            }
-
-            if (autofillStore.hasEverImportedPasswords) {
-                return@withContext false
-            }
-
-            if (autofillStore.hasDismissedMainAppSettingsPromo) {
-                return@withContext false
-            }
-
-            autofillStore.getCredentialCount().firstOrNull()?.fold(
-                onSuccess = { value ->
-                    if ((value) >= MAX_CREDENTIALS_FOR_PROMO) {
-                        return@withContext false
-                    }
-                },
-                onFailure = {
-                    logcat(TAG) { "Credential count retrieval failed, fallback to disabled" }
-                    return@withContext false
-                },
-            ) ?: return@withContext false
-
-            if (passwordImportAvailability.canImport().not()) {
-                return@withContext false
-            }
-
-            return@withContext true
+        if (featureEnabled().not()) {
+            return false
         }
+
+        if (autofillStore.hasEverImportedPasswords) {
+            return false
+        }
+
+        if (autofillStore.hasDismissedMainAppSettingsPromo) {
+            return false
+        }
+
+        autofillStore.getCredentialCount().firstOrNull()?.fold(
+            onSuccess = { value ->
+                if ((value) >= MAX_CREDENTIALS_FOR_PROMO) {
+                    return false
+                }
+            },
+            onFailure = {
+                logcat(TAG) { "Credential count retrieval failed, fallback to disabled" }
+                return false
+            },
+        ) ?: return false
+
+        if (passwordImportAvailability.canImport().not()) {
+            return false
+        }
+
+        return true
     }
 
     private fun featureEnabled(): Boolean {

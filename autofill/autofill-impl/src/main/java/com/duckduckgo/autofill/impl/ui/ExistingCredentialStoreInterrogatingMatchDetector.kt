@@ -21,9 +21,9 @@ import com.duckduckgo.autofill.api.ExistingCredentialMatchDetector.ContainsCrede
 import com.duckduckgo.autofill.impl.store.InternalAutofillStore
 import com.duckduckgo.common.utils.DefaultDispatcherProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @ContributesBinding(AppScope::class)
@@ -33,9 +33,8 @@ class ExistingCredentialStoreInterrogatingMatchDetector @Inject constructor(
 ) :
     ExistingCredentialMatchDetector {
 
+    @OnIo
     override suspend fun determine(currentUrl: String, username: String?, password: String?): ContainsCredentialsResult {
-        return withContext(dispatcherProvider.io()) {
-            autofillStore.containsCredentials(currentUrl, username, password)
-        }
+        return autofillStore.containsCredentials(currentUrl, username, password)
     }
 }

@@ -20,6 +20,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.duckduckgo.anvil.annotations.ContributesViewModel
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.ViewScope
 import com.duckduckgo.duckchat.impl.feature.DuckChatFeature
 import com.duckduckgo.duckchat.impl.pixel.DuckChatPixels
@@ -32,7 +33,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.util.Locale
 import javax.inject.Inject
@@ -200,8 +200,10 @@ class ContextualSuggestionsViewModel @Inject constructor(
         showSuggestions()
     }
 
-    private suspend fun suggestionsEnabled(): Boolean =
-        withContext(dispatchers.io()) { duckChatFeature.contextualSuggestedPrompts().isEnabled() }
+    @OnIo
+    private suspend fun suggestionsEnabled(): Boolean {
+        return duckChatFeature.contextualSuggestedPrompts().isEnabled()
+    }
 
     private suspend fun fetchSuggestions(
         url: String?,

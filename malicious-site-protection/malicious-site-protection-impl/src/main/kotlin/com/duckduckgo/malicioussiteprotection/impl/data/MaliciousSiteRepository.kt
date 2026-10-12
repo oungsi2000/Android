@@ -18,6 +18,7 @@ package com.duckduckgo.malicioussiteprotection.impl.data
 
 import com.duckduckgo.app.statistics.pixels.Pixel
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.malicioussiteprotection.api.MaliciousSiteProtection.Feed
 import com.duckduckgo.malicioussiteprotection.api.MaliciousSiteProtection.Feed.MALWARE
@@ -86,38 +87,36 @@ class RealMaliciousSiteRepository @Inject constructor(
 
     private val writeMutex = Mutex()
 
+    @OnIo
     override suspend fun getFeedForHashPrefix(hashPrefix: String): Feed? {
-        return withContext(dispatcherProvider.io()) {
-            if (writeMutex.isLocked) {
-                throw WriteInProgressException()
-            }
-            maliciousSiteDao.getHashPrefix(hashPrefix)?.type?.let {
-                when (it) {
-                    PHISHING.name -> PHISHING
-                    MALWARE.name -> MALWARE
-                    SCAM.name -> SCAM
-                    else -> null
-                }
+        if (writeMutex.isLocked) {
+            throw WriteInProgressException()
+        }
+        return maliciousSiteDao.getHashPrefix(hashPrefix)?.type?.let {
+            when (it) {
+                PHISHING.name -> PHISHING
+                MALWARE.name -> MALWARE
+                SCAM.name -> SCAM
+                else -> null
             }
         }
     }
 
+    @OnIo
     override suspend fun getFilters(hash: String): FilterSet? {
-        return withContext(dispatcherProvider.io()) {
-            if (writeMutex.isLocked) {
-                throw WriteInProgressException()
-            }
-            maliciousSiteDao.getFilter(hash)?.let {
-                FilterSet(
-                    filters = Filter(it.hash, it.regex),
-                    feed = when (it.type) {
-                        PHISHING.name -> PHISHING
-                        MALWARE.name -> MALWARE
-                        SCAM.name -> SCAM
-                        else -> return@let null
-                    },
-                )
-            }
+        if (writeMutex.isLocked) {
+            throw WriteInProgressException()
+        }
+        return maliciousSiteDao.getFilter(hash)?.let {
+            FilterSet(
+                filters = Filter(it.hash, it.regex),
+                feed = when (it.type) {
+                    PHISHING.name -> PHISHING
+                    MALWARE.name -> MALWARE
+                    SCAM.name -> SCAM
+                    else -> return@let null
+                },
+            )
         }
     }
 
@@ -169,20 +168,19 @@ class RealMaliciousSiteRepository @Inject constructor(
         }
     }
 
+    @OnIo
     private suspend fun loadDataOfType(
         type: Type,
         loadData: suspend (revisions: List<RevisionEntity>, networkRevision: Int) -> Unit,
     ): Result<Unit> {
-        return withContext(dispatcherProvider.io()) {
-            val networkRevision = maliciousSiteService.getRevision().revision
-            val localRevisions = writeMutex.withLock { getLocalRevisions(type) }
+        val networkRevision = maliciousSiteService.getRevision().revision
+        val localRevisions = writeMutex.withLock { getLocalRevisions(type) }
 
-            try {
-                loadData(localRevisions, networkRevision)
-                Result.success(Unit)
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
+        return try {
+            loadData(localRevisions, networkRevision)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 

@@ -17,12 +17,12 @@
 package com.duckduckgo.app.browser.animations
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.extensions.toTldPlusOne
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import javax.inject.Inject
 
@@ -71,14 +71,14 @@ class RealAddressBarTrackersAnimationManager @Inject constructor(
     override val softwareRenderingModeEnabled: Flow<Boolean> =
         addressBarTrackersAnimationFeatureToggle.softwareRenderingMode().enabled()
 
+    @OnIo
     override suspend fun fetchFeatureState() {
-        withContext(dispatcherProvider.io()) {
-            cachedFeatureState = addressBarTrackersAnimationFeatureToggle.feature().isEnabled()
-        }
+        cachedFeatureState = addressBarTrackersAnimationFeatureToggle.feature().isEnabled()
     }
 
-    override suspend fun isFeatureEnabled(): Boolean = withContext(dispatcherProvider.io()) {
-        cachedFeatureState ?: addressBarTrackersAnimationFeatureToggle.feature().isEnabled().also {
+    @OnIo
+    override suspend fun isFeatureEnabled(): Boolean {
+        return cachedFeatureState ?: addressBarTrackersAnimationFeatureToggle.feature().isEnabled().also {
             cachedFeatureState = it
         }
     }

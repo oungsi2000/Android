@@ -21,6 +21,7 @@ import com.duckduckgo.app.browser.UriString.Companion.sameOrSubdomain
 import com.duckduckgo.app.fire.fireproofwebsite.data.FireproofWebsiteRepository
 import com.duckduckgo.browser.feature.toggles.AndroidBrowserConfigFeature
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.file.FileDeleter
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.duckchat.api.DuckAiHostProvider
@@ -82,7 +83,8 @@ class DuckDuckGoIndexedDBManager @Inject constructor(
         fileDeleter.deleteContents(rootFolder, excludedFolders).getOrThrow()
     }
 
-    override suspend fun clearOnlyDuckAiData(): Unit = withContext(dispatcherProvider.io()) {
+    @OnIo
+    override suspend fun clearOnlyDuckAiData() {
         val rootFolder = File(context.applicationInfo.dataDir, "app_webview/Default/IndexedDB")
         val duckAiFolders = getDuckAiFolders(rootFolder)
 

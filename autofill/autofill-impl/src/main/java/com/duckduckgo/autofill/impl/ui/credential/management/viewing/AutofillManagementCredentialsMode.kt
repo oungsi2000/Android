@@ -69,6 +69,7 @@ import com.duckduckgo.common.ui.view.text.DaxTextInput
 import com.duckduckgo.common.ui.viewbinding.viewBinding
 import com.duckduckgo.common.utils.DispatcherProvider
 import com.duckduckgo.common.utils.FragmentViewModelFactory
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.edgetoedge.EdgeToEdgeHandler
 import com.duckduckgo.di.scopes.FragmentScope
 import com.duckduckgo.mobile.android.R.dimen
@@ -544,14 +545,13 @@ class AutofillManagementCredentialsMode : DuckDuckGoFragment(R.layout.fragment_a
         invalidateMenu()
     }
 
+    @OnIo
     private suspend fun showPlaceholderFavicon(credentials: LoginCredentials) {
-        withContext(dispatchers.io()) {
-            val size = resources.getDimensionPixelSize(dimen.toolbarIconSize)
-            val placeholder = generateDefaultFavicon(credentials, size)
-            val favicon = BitmapDrawable(resources, placeholder)
-            withContext(dispatchers.main()) {
-                getActionBar()?.setLogo(favicon)
-            }
+        val size = resources.getDimensionPixelSize(dimen.toolbarIconSize)
+        val placeholder = generateDefaultFavicon(credentials, size)
+        val favicon = BitmapDrawable(resources, placeholder)
+        withContext(dispatchers.main()) {
+            getActionBar()?.setLogo(favicon)
         }
     }
 

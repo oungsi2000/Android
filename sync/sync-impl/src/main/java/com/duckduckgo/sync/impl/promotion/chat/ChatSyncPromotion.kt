@@ -20,6 +20,7 @@ import com.duckduckgo.app.statistics.pixels.Pixel
 import com.duckduckgo.app.statistics.pixels.Pixel.PixelType.Unique
 import com.duckduckgo.browsermode.api.BrowserMode
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.duckchat.api.DuckChat
 import com.duckduckgo.sync.api.DeviceSyncState
@@ -32,7 +33,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface ChatSyncPromotion {
@@ -110,8 +110,9 @@ class RealChatSyncPromotion @Inject constructor(
         }
     }
 
-    private suspend fun canTurnOnSync(): Boolean = withContext(dispatchers.io()) {
-        return@withContext syncState.isFeatureEnabled() &&
+    @OnIo
+    private suspend fun canTurnOnSync(): Boolean {
+        return syncState.isFeatureEnabled() &&
             syncState.isDuckChatSyncFeatureEnabled() &&
             !syncState.isUserSignedInOnDevice()
     }

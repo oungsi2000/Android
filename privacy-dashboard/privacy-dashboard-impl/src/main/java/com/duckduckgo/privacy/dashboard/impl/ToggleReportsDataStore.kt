@@ -21,6 +21,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.formatters.time.DatabaseDateFormatter
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.privacy.dashboard.impl.SharedPreferencesToggleReportsDataStore.Keys.TOGGLE_REPORTS_PROMPTS_DISMISSED
@@ -32,7 +33,6 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface ToggleReportsDataStore {
@@ -124,20 +124,19 @@ class SharedPreferencesToggleReportsDataStore @Inject constructor(
         }?.maxPromptCount ?: DEFAULT_MAX_PROMPT
     }
 
+    @OnIo
     override suspend fun insertTogglePromptDismiss() {
-        withContext(dispatcherProvider.io()) {
-            store.edit { prefs ->
-                val currentSet = getPromptsDismissed().toMutableSet()
-                val currentTimeMillis = DatabaseDateFormatter.millisIso8601()
-                val interval = getDismissInterval()
-                currentSet.removeAll { storedTimestamp ->
-                    val storedTime = storedTimestamp.toLong()
-                    (currentTimeMillis - storedTime > interval * 1000L)
-                }
-                val dismissTime = DatabaseDateFormatter.millisIso8601().toString()
-                currentSet.add(dismissTime)
-                prefs[TOGGLE_REPORTS_PROMPTS_DISMISSED] = currentSet
+        store.edit { prefs ->
+            val currentSet = getPromptsDismissed().toMutableSet()
+            val currentTimeMillis = DatabaseDateFormatter.millisIso8601()
+            val interval = getDismissInterval()
+            currentSet.removeAll { storedTimestamp ->
+                val storedTime = storedTimestamp.toLong()
+                (currentTimeMillis - storedTime > interval * 1000L)
             }
+            val dismissTime = DatabaseDateFormatter.millisIso8601().toString()
+            currentSet.add(dismissTime)
+            prefs[TOGGLE_REPORTS_PROMPTS_DISMISSED] = currentSet
         }
     }
 
@@ -147,20 +146,19 @@ class SharedPreferencesToggleReportsDataStore @Inject constructor(
         }?.toList() ?: emptyList()
     }
 
+    @OnIo
     override suspend fun insertTogglePromptSend() {
-        withContext(dispatcherProvider.io()) {
-            store.edit { prefs ->
-                val currentSet = getReportsSent().toMutableSet()
-                val currentTimeMillis = DatabaseDateFormatter.millisIso8601()
-                val interval = getPromptInterval()
-                currentSet.removeAll { storedTimestamp ->
-                    val storedTime = storedTimestamp.toLong()
-                    (currentTimeMillis - storedTime > interval * 1000L)
-                }
-                val sendTime = DatabaseDateFormatter.millisIso8601().toString()
-                currentSet.add(sendTime)
-                prefs[TOGGLE_REPORTS_SENT] = currentSet
+        store.edit { prefs ->
+            val currentSet = getReportsSent().toMutableSet()
+            val currentTimeMillis = DatabaseDateFormatter.millisIso8601()
+            val interval = getPromptInterval()
+            currentSet.removeAll { storedTimestamp ->
+                val storedTime = storedTimestamp.toLong()
+                (currentTimeMillis - storedTime > interval * 1000L)
             }
+            val sendTime = DatabaseDateFormatter.millisIso8601().toString()
+            currentSet.add(sendTime)
+            prefs[TOGGLE_REPORTS_SENT] = currentSet
         }
     }
 
@@ -170,32 +168,32 @@ class SharedPreferencesToggleReportsDataStore @Inject constructor(
         }?.toList() ?: emptyList()
     }
 
-    override suspend fun canPrompt(): Boolean =
-        withContext(dispatcherProvider.io()) {
-            val currentTimeMillis = DatabaseDateFormatter.millisIso8601()
+    @OnIo
+    override suspend fun canPrompt(): Boolean {
+        val currentTimeMillis = DatabaseDateFormatter.millisIso8601()
 
-            suspend fun checkRecentSends(): Boolean {
-                val reportsSent = getReportsSent()
-                val promptInterval = getPromptInterval()
-                val maxPromptCount = getMaxPromptCount()
-                return reportsSent.count { sendTime ->
-                    currentTimeMillis - sendTime.toLong() <= promptInterval * 1000L
-                } < maxPromptCount
-            }
-
-            suspend fun checkDismissInterval(): Boolean {
-                val promptsDismissed = getPromptsDismissed()
-                val dismissInterval = getDismissInterval()
-                return currentTimeMillis - (promptsDismissed.maxOfOrNull { it.toLong() } ?: 0) >
-                    dismissInterval * 1000L
-            }
-
-            return@withContext when {
-                getPromptLimitLogicEnabled() && getDismissLogicEnabled() ->
-                    checkRecentSends() && checkDismissInterval()
-                getPromptLimitLogicEnabled() -> checkRecentSends()
-                getDismissLogicEnabled() -> checkDismissInterval()
-                else -> true
-            }
+        suspend fun checkRecentSends(): Boolean {
+            val reportsSent = getReportsSent()
+            val promptInterval = getPromptInterval()
+            val maxPromptCount = getMaxPromptCount()
+            return reportsSent.count { sendTime ->
+                currentTimeMillis - sendTime.toLong() <= promptInterval * 1000L
+            } < maxPromptCount
         }
+
+        suspend fun checkDismissInterval(): Boolean {
+            val promptsDismissed = getPromptsDismissed()
+            val dismissInterval = getDismissInterval()
+            return currentTimeMillis - (promptsDismissed.maxOfOrNull { it.toLong() } ?: 0) >
+                dismissInterval * 1000L
+        }
+
+        return when {
+            getPromptLimitLogicEnabled() && getDismissLogicEnabled() ->
+                checkRecentSends() && checkDismissInterval()
+            getPromptLimitLogicEnabled() -> checkRecentSends()
+            getDismissLogicEnabled() -> checkDismissInterval()
+            else -> true
+        }
+    }
 }

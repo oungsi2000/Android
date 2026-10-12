@@ -16,6 +16,7 @@
 
 package com.duckduckgo.duckchat.impl.messaging.sync
 
+import com.duckduckgo.common.utils.LogFailure
 import com.duckduckgo.duckchat.impl.DuckChatConstants.JsResponseKeys
 import com.duckduckgo.js.messaging.api.JsCallbackData
 import com.duckduckgo.js.messaging.api.JsMessage
@@ -39,9 +40,7 @@ class SyncJsResponder(
         }
         runCatching {
             jsMessaging.onResponse(JsCallbackData(jsonPayload, featureName, jsMessage.method, jsMessage.id!!))
-        }.onFailure { e ->
-            logcat(LogPriority.ERROR) { "DuckChat-Sync: failed to send success response: ${e.message}" }
-        }
+        }.onFailure @LogFailure("DuckChat-Sync: failed to send success response: ", priority = LogPriority.ERROR, stackTrace = false) {}
     }
 
     fun sendError(error: String) {
@@ -52,8 +51,6 @@ class SyncJsResponder(
         runCatching {
             jsMessaging.onResponse(JsCallbackData(errorPayload, featureName, jsMessage.method, jsMessage.id!!))
             logcat { "DuckChat-Sync: error: $error" }
-        }.onFailure { e ->
-            logcat(LogPriority.ERROR) { "DuckChat-Sync: failed to send error response: ${e.message}" }
-        }
+        }.onFailure @LogFailure("DuckChat-Sync: failed to send error response: ", priority = LogPriority.ERROR, stackTrace = false) {}
     }
 }

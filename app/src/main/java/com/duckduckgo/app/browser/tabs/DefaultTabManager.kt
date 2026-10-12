@@ -23,6 +23,7 @@ import com.duckduckgo.app.tabs.model.TabEntity
 import com.duckduckgo.app.tabs.model.TabRepository
 import com.duckduckgo.browsermode.api.BrowserMode
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.ActivityScope
 import com.duckduckgo.duckchat.api.DuckAiSessionCallback
 import com.duckduckgo.duckchat.api.DuckAiSessionExitTrigger
@@ -102,11 +103,12 @@ class DefaultTabManager @Inject constructor(
         }
     }
 
+    @OnIo
     override suspend fun openNewTab(
         query: String?,
         sourceTabId: String?,
         skipHome: Boolean,
-    ): String = withContext(dispatchers.io()) {
+    ): String {
         selectedTabId?.let { tabId ->
             duckAiSessionCallback.onExitIntent(tabId, DuckAiSessionExitTrigger.NEW_TAB_OPENED)
         }
@@ -118,7 +120,7 @@ class DefaultTabManager @Inject constructor(
             }
         }
 
-        return@withContext if (sourceTabId != null) {
+        return if (sourceTabId != null) {
             tabRepository.addFromSourceTab(
                 url = url,
                 skipHome = skipHome,
@@ -132,7 +134,8 @@ class DefaultTabManager @Inject constructor(
         }
     }
 
-    override suspend fun getTabById(tabId: String): TabEntity? = withContext(dispatchers.io()) {
-        return@withContext tabRepository.getTab(tabId)
+    @OnIo
+    override suspend fun getTabById(tabId: String): TabEntity? {
+        return tabRepository.getTab(tabId)
     }
 }

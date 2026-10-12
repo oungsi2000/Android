@@ -24,6 +24,7 @@ import androidx.webkit.WebViewFeature.WEB_AUTHENTICATION
 import com.duckduckgo.app.browser.DuckDuckGoWebView
 import com.duckduckgo.autofill.api.AutofillFeature
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import kotlinx.coroutines.withContext
@@ -56,10 +57,9 @@ class RealWebViewPasskeyInitializer @Inject constructor(
         }
     }
 
+    @OnIo
     private suspend fun featureFlagEnabled(): Boolean {
-        return withContext(dispatchers.io()) {
-            autofillFeature.passkeySupport().isEnabled()
-        }
+        return autofillFeature.passkeySupport().isEnabled()
     }
 
     private suspend fun webViewCapable(): Boolean {

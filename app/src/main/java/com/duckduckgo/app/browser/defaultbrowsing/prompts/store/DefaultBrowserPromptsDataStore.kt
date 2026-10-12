@@ -27,11 +27,11 @@ import com.duckduckgo.app.browser.defaultbrowsing.prompts.store.DefaultBrowserPr
 import com.duckduckgo.app.browser.defaultbrowsing.prompts.store.DefaultBrowserPromptsDataStore.UserType
 import com.duckduckgo.app.browser.defaultbrowsing.prompts.store.DefaultBrowserPromptsDataStore.UserType.UNKNOWN
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface DefaultBrowserPromptsDataStore {
@@ -96,43 +96,38 @@ class DefaultBrowserPromptsPrefsDataStoreImpl @Inject constructor(
         preferences[booleanPreferencesKey(PREF_KEY_SHOW_SET_AS_DEFAULT_MESSAGE)] ?: false
     }
 
+    @OnIo
     override suspend fun storeStage(stage: Stage) {
-        withContext(dispatchers.io()) {
-            store.edit { preferences ->
-                preferences[stringPreferencesKey(PREF_KEY_EXPERIMENT_STAGE_ID)] = stage.name
-            }
+        store.edit { preferences ->
+            preferences[stringPreferencesKey(PREF_KEY_EXPERIMENT_STAGE_ID)] = stage.name
         }
     }
 
+    @OnIo
     override suspend fun storeUserType(userType: UserType) {
-        withContext(dispatchers.io()) {
-            store.edit { preferences ->
-                preferences[stringPreferencesKey(PREF_KEY_USER_TYPE_ID)] = userType.name
-            }
+        store.edit { preferences ->
+            preferences[stringPreferencesKey(PREF_KEY_USER_TYPE_ID)] = userType.name
         }
     }
 
+    @OnIo
     override suspend fun storeShowSetAsDefaultPopupMenuItemState(show: Boolean) {
-        withContext(dispatchers.io()) {
-            store.edit { preferences ->
-                preferences[booleanPreferencesKey(PREF_KEY_SHOW_OVERFLOW_MENU_ITEM)] = show
-            }
+        store.edit { preferences ->
+            preferences[booleanPreferencesKey(PREF_KEY_SHOW_OVERFLOW_MENU_ITEM)] = show
         }
     }
 
+    @OnIo
     override suspend fun storeHighlightPopupMenuState(highlight: Boolean) {
-        withContext(dispatchers.io()) {
-            store.edit { preferences ->
-                preferences[booleanPreferencesKey(PREF_KEY_HIGHLIGHT_OVERFLOW_MENU_ICON)] = highlight
-            }
+        store.edit { preferences ->
+            preferences[booleanPreferencesKey(PREF_KEY_HIGHLIGHT_OVERFLOW_MENU_ICON)] = highlight
         }
     }
 
+    @OnIo
     override suspend fun storeShowSetAsDefaultMessageState(show: Boolean) {
-        withContext(dispatchers.io()) {
-            store.edit { preferences ->
-                preferences[booleanPreferencesKey(PREF_KEY_SHOW_SET_AS_DEFAULT_MESSAGE)] = show
-            }
+        store.edit { preferences ->
+            preferences[booleanPreferencesKey(PREF_KEY_SHOW_SET_AS_DEFAULT_MESSAGE)] = show
         }
     }
 }

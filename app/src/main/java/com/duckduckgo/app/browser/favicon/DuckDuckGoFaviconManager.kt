@@ -32,6 +32,7 @@ import com.duckduckgo.app.global.view.generateDefaultDrawable
 import com.duckduckgo.app.global.view.loadFavicon
 import com.duckduckgo.autofill.api.store.AutofillStore
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.baseHost
 import com.duckduckgo.common.utils.faviconLocation
 import com.duckduckgo.common.utils.touchFaviconLocation
@@ -83,34 +84,32 @@ class DuckDuckGoFaviconManager constructor(
         return saveFavicon(tabId, favicon, domain)
     }
 
+    @OnIo
     override suspend fun tryFetchFaviconForUrl(
         tabId: String,
         url: String,
     ): File? {
-        return withContext(dispatcherProvider.io()) {
-            val domain = url.extractDomain() ?: return@withContext null
+        val domain = url.extractDomain() ?: return null
 
-            val favicon = downloadFaviconFor(domain)
+        val favicon = downloadFaviconFor(domain)
 
-            return@withContext if (favicon != null) {
-                saveFavicon(tabId, favicon, domain)
-            } else {
-                null
-            }
+        return if (favicon != null) {
+            saveFavicon(tabId, favicon, domain)
+        } else {
+            null
         }
     }
 
+    @OnIo
     override suspend fun tryFetchFaviconForUrl(url: String): File? {
-        return withContext(dispatcherProvider.io()) {
-            val domain = url.extractDomain() ?: return@withContext null
+        val domain = url.extractDomain() ?: return null
 
-            val favicon = downloadFaviconFor(domain)
+        val favicon = downloadFaviconFor(domain)
 
-            return@withContext if (favicon != null) {
-                saveFavicon(null, favicon, domain)
-            } else {
-                null
-            }
+        return if (favicon != null) {
+            saveFavicon(null, favicon, domain)
+        } else {
+            null
         }
     }
 
@@ -217,43 +216,39 @@ class DuckDuckGoFaviconManager constructor(
         }
     }
 
+    @OnIo
     override suspend fun persistCachedFavicon(
         tabId: String,
         url: String,
     ) {
-        withContext(dispatcherProvider.io()) {
-            val domain = url.extractDomain() ?: return@withContext
-            val cachedFavicon = faviconPersister.faviconFile(FAVICON_TEMP_DIR, tabId, domain)
-            if (cachedFavicon != null) {
-                faviconPersister.copyToDirectory(cachedFavicon, FAVICON_PERSISTED_DIR, NO_SUBFOLDER, domain)
-            }
+        val domain = url.extractDomain() ?: return
+        val cachedFavicon = faviconPersister.faviconFile(FAVICON_TEMP_DIR, tabId, domain)
+        if (cachedFavicon != null) {
+            faviconPersister.copyToDirectory(cachedFavicon, FAVICON_PERSISTED_DIR, NO_SUBFOLDER, domain)
         }
     }
 
+    @OnIo
     override suspend fun deletePersistedFavicon(url: String) {
-        withContext(dispatcherProvider.io()) {
-            val domain = url.extractDomain() ?: return@withContext
-            val remainingFavicons = persistedFaviconsForDomain(domain)
-            if (remainingFavicons == 1) {
-                faviconPersister.deletePersistedFavicon(domain)
-            }
+        val domain = url.extractDomain() ?: return
+        val remainingFavicons = persistedFaviconsForDomain(domain)
+        if (remainingFavicons == 1) {
+            faviconPersister.deletePersistedFavicon(domain)
         }
     }
 
+    @OnIo
     override suspend fun deleteOldTempFavicon(
         tabId: String,
         path: String?,
     ) {
-        withContext(dispatcherProvider.io()) {
-            removeCacheForTab(path, tabId)
-            faviconPersister.deleteFaviconsForSubfolder(FAVICON_TEMP_DIR, tabId, path)
-        }
+        removeCacheForTab(path, tabId)
+        faviconPersister.deleteFaviconsForSubfolder(FAVICON_TEMP_DIR, tabId, path)
     }
 
+    @OnIo
     override suspend fun deleteAllTemp() {
-        withContext(dispatcherProvider.io()) {
-            faviconPersister.deleteAll(FAVICON_TEMP_DIR)
-        }
+        faviconPersister.deleteAll(FAVICON_TEMP_DIR)
     }
 
     override fun generateDefaultFavicon(

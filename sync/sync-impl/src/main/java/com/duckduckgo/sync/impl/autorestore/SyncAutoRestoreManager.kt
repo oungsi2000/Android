@@ -17,6 +17,7 @@
 package com.duckduckgo.sync.impl.autorestore
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.persistentstorage.api.PersistentStorage
 import com.duckduckgo.persistentstorage.api.PersistentStorageAvailability
@@ -26,7 +27,6 @@ import com.squareup.anvil.annotations.ContributesBinding
 import com.squareup.moshi.Json
 import com.squareup.moshi.Moshi
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import logcat.LogPriority
 import logcat.logcat
 import javax.inject.Inject
@@ -49,58 +49,53 @@ class RealSyncAutoRestoreManager @Inject constructor(
     private val moshi: Moshi,
 ) : SyncAutoRestoreManager {
 
+    @OnIo
     override suspend fun isAutoRestoreAvailable(): Boolean {
-        return withContext(dispatcherProvider.io()) {
-            syncFeature.syncAutoRestore().isEnabled() &&
-                persistentStorage.checkAvailability() is PersistentStorageAvailability.Available
-        }
+        return syncFeature.syncAutoRestore().isEnabled() &&
+            persistentStorage.checkAvailability() is PersistentStorageAvailability.Available
     }
 
+    @OnIo
     override suspend fun saveAutoRestoreData(recoveryCode: String, deviceId: String?): Boolean {
-        return withContext(dispatcherProvider.io()) {
-            val payload = RestorePayload(recoveryCode = recoveryCode, deviceId = deviceId)
-            val payloadJson = moshi.adapter(RestorePayload::class.java).toJson(payload)
-            logcat { "Sync-Recovery: storing recovery code and device ID ($deviceId) to Block Store" }
-            persistentStorage.store(SyncRecoveryPersistentStorageKey, payloadJson.toByteArray(Charsets.UTF_8))
-                .onSuccess {
-                    logcat { "Sync-Recovery: payload stored successfully" }
-                    dataStore.setRestoreOnReinstallEnabled(true)
-                }
-                .onFailure { logcat(LogPriority.ERROR) { "Sync-Recovery: failed to store payload - ${it.message}" } }
-                .isSuccess
-        }
+        val payload = RestorePayload(recoveryCode = recoveryCode, deviceId = deviceId)
+        val payloadJson = moshi.adapter(RestorePayload::class.java).toJson(payload)
+        logcat { "Sync-Recovery: storing recovery code and device ID ($deviceId) to Block Store" }
+        return persistentStorage.store(SyncRecoveryPersistentStorageKey, payloadJson.toByteArray(Charsets.UTF_8))
+            .onSuccess {
+                logcat { "Sync-Recovery: payload stored successfully" }
+                dataStore.setRestoreOnReinstallEnabled(true)
+            }
+            .onFailure { logcat(LogPriority.ERROR) { "Sync-Recovery: failed to store payload - ${it.message}" } }
+            .isSuccess
     }
 
+    @OnIo
     override suspend fun retrieveRecoveryPayload(): RestorePayload? {
-        return withContext(dispatcherProvider.io()) {
-            val bytes = persistentStorage.retrieve(SyncRecoveryPersistentStorageKey).getOrNull() ?: return@withContext null
-            val rawString = String(bytes, Charsets.UTF_8)
-            moshi.adapter(RestorePayload::class.java).fromJson(rawString)
-        }
+        val bytes = persistentStorage.retrieve(SyncRecoveryPersistentStorageKey).getOrNull() ?: return null
+        val rawString = String(bytes, Charsets.UTF_8)
+        return moshi.adapter(RestorePayload::class.java).fromJson(rawString)
     }
 
+    @OnIo
     override suspend fun clearAutoRestoreData(): Result<Unit> {
-        return withContext(dispatcherProvider.io()) {
-            logcat { "Sync-Recovery: clearing auto-restore data" }
-            val storageResult = persistentStorage.clear(SyncRecoveryPersistentStorageKey)
-            storageResult.fold(
-                onSuccess = {
-                    dataStore.setRestoreOnReinstallEnabled(false)
-                    logcat { "Sync-Recovery: recovery code cleared successfully" }
-                    Result.Success(Unit)
-                },
-                onFailure = { e ->
-                    logcat(LogPriority.ERROR) { "Sync-Recovery: failed to clear recovery code - ${e.message}" }
-                    Result.Error(reason = e.message ?: "")
-                },
-            )
-        }
+        logcat { "Sync-Recovery: clearing auto-restore data" }
+        val storageResult = persistentStorage.clear(SyncRecoveryPersistentStorageKey)
+        return storageResult.fold(
+            onSuccess = {
+                dataStore.setRestoreOnReinstallEnabled(false)
+                logcat { "Sync-Recovery: recovery code cleared successfully" }
+                Result.Success(Unit)
+            },
+            onFailure = { e ->
+                logcat(LogPriority.ERROR) { "Sync-Recovery: failed to clear recovery code - ${e.message}" }
+                Result.Error(reason = e.message ?: "")
+            },
+        )
     }
 
+    @OnIo
     override suspend fun isRestoreOnReinstallEnabled(): Boolean {
-        return withContext(dispatcherProvider.io()) {
-            dataStore.isRestoreOnReinstallEnabled()
-        }
+        return dataStore.isRestoreOnReinstallEnabled()
     }
 }
 

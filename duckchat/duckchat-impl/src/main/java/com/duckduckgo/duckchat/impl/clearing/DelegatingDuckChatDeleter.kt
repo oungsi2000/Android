@@ -18,6 +18,7 @@ package com.duckduckgo.duckchat.impl.clearing
 
 import com.duckduckgo.browsermode.api.RegularMode
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.duckchat.impl.feature.DuckChatFeature
 import com.duckduckgo.duckchat.impl.pixel.DuckChatPixels
@@ -25,7 +26,6 @@ import com.duckduckgo.duckchat.store.impl.DuckAiChatStore
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.Lazy
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import javax.inject.Inject
 
@@ -44,7 +44,8 @@ class DelegatingDuckChatDeleter @Inject constructor(
     private val dispatchers: DispatcherProvider,
 ) : DuckChatDeleter {
 
-    override suspend fun deleteChat(chatId: String): Boolean = withContext(dispatchers.io()) {
+    @OnIo
+    override suspend fun deleteChat(chatId: String): Boolean {
         val hasMigrated = store.hasMigrated()
         val deleter = if (hasMigrated && feature.useNativeStorageChatData().isEnabled()) nativeDeleter else webViewDeleter
         logcat { "DuckAI chat deletion: using ${if (deleter === nativeDeleter) "native store" else "WebView"} deleter" }
@@ -53,10 +54,11 @@ class DelegatingDuckChatDeleter @Inject constructor(
             // if we have migrated but we're using the WV deleter, we keep all data consistent by deleting in both places
             nativeDeleter.deleteChat(chatId)
         }
-        return@withContext deleter.deleteChat(chatId)
+        return deleter.deleteChat(chatId)
     }
 
-    override suspend fun deleteAllChats(): Boolean = withContext(dispatchers.io()) {
+    @OnIo
+    override suspend fun deleteAllChats(): Boolean {
         val hasMigrated = store.hasMigrated()
         val deleter = if (hasMigrated && feature.useNativeStorageChatData().isEnabled()) nativeDeleter else webViewDeleter
         logcat { "DuckAI delete all chats: using ${if (deleter === nativeDeleter) "native store" else "WebView"} deleter" }
@@ -64,6 +66,6 @@ class DelegatingDuckChatDeleter @Inject constructor(
         if (hasMigrated && deleter != nativeDeleter) {
             nativeDeleter.deleteAllChats()
         }
-        return@withContext deleter.deleteAllChats()
+        return deleter.deleteAllChats()
     }
 }

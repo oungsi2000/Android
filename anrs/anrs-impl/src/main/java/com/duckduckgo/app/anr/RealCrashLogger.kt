@@ -21,7 +21,7 @@ import com.duckduckgo.app.anrs.store.UncaughtExceptionDao
 import com.duckduckgo.app.di.ProcessName
 import com.duckduckgo.appbuildconfig.api.AppBuildConfig
 import com.duckduckgo.browser.api.WebViewVersionProvider
-import com.duckduckgo.common.utils.checkMainThread
+import com.duckduckgo.common.utils.CheckNotMainThread
 import com.duckduckgo.customtabs.api.CustomTabDetector
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
@@ -35,9 +35,8 @@ class RealCrashLogger @Inject constructor(
     private val customTabDetector: CustomTabDetector,
     @ProcessName private val processName: String,
 ) : CrashLogger {
+    @CheckNotMainThread
     override fun logCrash(crash: CrashLogger.Crash) {
-        checkMainThread()
-
         uncaughtExceptionDao.add(
             crash.asCrashEntity(
                 appBuildConfig.versionName,

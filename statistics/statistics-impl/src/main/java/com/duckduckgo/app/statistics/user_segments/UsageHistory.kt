@@ -22,6 +22,7 @@ import com.duckduckgo.app.statistics.user_segments.RealUsageHistory.SegmentKey.K
 import com.duckduckgo.app.statistics.user_segments.RealUsageHistory.SegmentKey.KEY_DUCKAI_DATES
 import com.duckduckgo.app.statistics.user_segments.RealUsageHistory.SegmentKey.KEY_SEARCH_DATES
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.data.store.api.SharedPreferencesProvider
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesTo
@@ -83,9 +84,10 @@ private class RealUsageHistory(
         preferences.edit { putString(key.name, segments) }
     }
 
-    private suspend fun getOrderedUsageHistoryInternal(key: SegmentKey): List<String> = withContext(dispatcherProvider.io()) {
+    @OnIo
+    private suspend fun getOrderedUsageHistoryInternal(key: SegmentKey): List<String> {
         val sortedCommaSeparatedSegments = preferences.getString(key.name, "")
-        return@withContext if (sortedCommaSeparatedSegments.isNullOrEmpty()) {
+        return if (sortedCommaSeparatedSegments.isNullOrEmpty()) {
             emptyList()
         } else {
             sortedCommaSeparatedSegments.split(",")

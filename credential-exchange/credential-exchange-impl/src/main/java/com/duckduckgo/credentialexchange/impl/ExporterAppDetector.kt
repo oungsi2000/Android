@@ -21,9 +21,9 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.core.net.toUri
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
 import logcat.LogPriority.VERBOSE
 import logcat.logcat
@@ -49,8 +49,9 @@ class RealExporterAppDetector @Inject constructor(
     private val dispatchers: DispatcherProvider,
 ) : ExporterAppDetector {
 
-    override suspend fun exporterApps(): List<String> = withContext(dispatchers.io()) {
-        runCatching {
+    @OnIo
+    override suspend fun exporterApps(): List<String> {
+        return runCatching {
             // Google Play services declares a mime type as well as the content scheme, and an intent only matches a filter if it has both.
             // Other exporters may declare the scheme alone, which matches only an intent with no type, so both shapes are asked for.
             val exporters = (findExportersForMime(MIME_TYPE_EXPORT) + findExportersForMime(null)).distinct()

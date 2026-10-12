@@ -46,6 +46,7 @@ import com.duckduckgo.mobile.android.vpn.ui.tracker_activity.model.AppsProtectio
 import com.duckduckgo.mobile.android.vpn.ui.tracker_activity.model.TrackerCompanyBadge
 import com.duckduckgo.mobile.android.vpn.ui.tracker_activity.model.TrackerFeedItem
 import com.duckduckgo.mobile.android.vpn.ui.tracker_activity.model.TrackerFeedItem.TrackerLoadingSkeleton
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -78,6 +79,10 @@ class DeviceShieldActivityFeedViewModelTest {
         db = Room.inMemoryDatabaseBuilder(InstrumentationRegistry.getInstrumentation().targetContext, VpnDatabase::class.java)
             .allowMainThreadQueries()
             .build()
+
+        // Until a test says otherwise, the VPN state and the apps list have not been reported yet
+        whenever(mockVpnStateMonitor.getStateFlow(AppTpVpnFeature.APPTP_VPN)).thenReturn(MutableSharedFlow())
+        runBlocking { whenever(mockExcludedApps.getAppsAndProtectionInfo()).thenReturn(MutableSharedFlow()) }
 
         repository = RealAppTrackerBlockingStatsRepository(db, coroutineTestRule.testDispatcherProvider)
         viewModel = DeviceShieldActivityFeedViewModel(

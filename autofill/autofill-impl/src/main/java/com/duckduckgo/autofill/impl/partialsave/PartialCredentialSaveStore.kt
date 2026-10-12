@@ -21,10 +21,10 @@ import com.duckduckgo.autofill.api.AutofillFeature
 import com.duckduckgo.autofill.impl.time.TimeProvider
 import com.duckduckgo.autofill.impl.urlmatcher.AutofillUrlMatcher
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.VERBOSE
 import logcat.LogPriority.WARN
 import logcat.logcat
@@ -55,61 +55,58 @@ class PartialCredentialSaveInMemoryStore @Inject constructor(
 
     private val backFillHistory = LruCache<String, PartialSave>(5)
 
+    @OnIo
     override suspend fun saveUsername(
         url: String,
         username: String,
     ) {
-        withContext(dispatchers.io()) {
-            if (!autofillFeature.partialFormSaves().isEnabled()) {
-                logcat(WARN) { "Partial form saves are disabled. Not saving username [$username] for $url" }
-                return@withContext
-            }
-
-            val etldPlusOne = extractEtldPlusOne(url) ?: return@withContext
-            logcat(VERBOSE) { "Storing username [$username] as a backFill candidate for $etldPlusOne" }
-            backFillHistory.put(etldPlusOne, PartialSave(username = username, creationTimestamp = timeProvider.currentTimeMillis()))
+        if (!autofillFeature.partialFormSaves().isEnabled()) {
+            logcat(WARN) { "Partial form saves are disabled. Not saving username [$username] for $url" }
+            return
         }
+
+        val etldPlusOne = extractEtldPlusOne(url) ?: return
+        logcat(VERBOSE) { "Storing username [$username] as a backFill candidate for $etldPlusOne" }
+        backFillHistory.put(etldPlusOne, PartialSave(username = username, creationTimestamp = timeProvider.currentTimeMillis()))
     }
 
     /**
      * If a potential backFill username can be used for the given URL it will be returned
      */
+    @OnIo
     override suspend fun getUsernameForBackFilling(url: String): String? {
-        return withContext(dispatchers.io()) {
-            if (!autofillFeature.partialFormSaves().isEnabled()) {
-                logcat(WARN) { "Partial form saves are disabled. Not checking for username for $url" }
-                return@withContext null
-            }
-
-            val etldPlusOne = extractEtldPlusOne(url) ?: return@withContext null
-            val activeBackFill = backFillHistory[etldPlusOne] ?: return@withContext null
-
-            if (activeBackFill.isExpired()) {
-                logcat(VERBOSE) { "Found expired username [$activeBackFill.username] for $etldPlusOne. Not using for backFill." }
-                return@withContext null
-            }
-
-            backFillHistory.put(etldPlusOne, activeBackFill.copy(lastConsumedTimestamp = timeProvider.currentTimeMillis()))
-            activeBackFill.username
+        if (!autofillFeature.partialFormSaves().isEnabled()) {
+            logcat(WARN) { "Partial form saves are disabled. Not checking for username for $url" }
+            return null
         }
+
+        val etldPlusOne = extractEtldPlusOne(url) ?: return null
+        val activeBackFill = backFillHistory[etldPlusOne] ?: return null
+
+        if (activeBackFill.isExpired()) {
+            logcat(VERBOSE) { "Found expired username [$activeBackFill.username] for $etldPlusOne. Not using for backFill." }
+            return null
+        }
+
+        backFillHistory.put(etldPlusOne, activeBackFill.copy(lastConsumedTimestamp = timeProvider.currentTimeMillis()))
+        return activeBackFill.username
     }
 
+    @OnIo
     override suspend fun wasBackFilledRecently(
         url: String,
         username: String,
     ): Boolean {
-        return withContext(dispatchers.io()) {
-            if (!autofillFeature.partialFormSaves().isEnabled()) {
-                logcat(WARN) { "Partial form saves are disabled. Cannot have been backFilled recently." }
-                return@withContext false
-            }
-
-            val etldPlusOne = extractEtldPlusOne(url) ?: return@withContext false
-            val partialSave = backFillHistory[etldPlusOne] ?: return@withContext false
-            if (partialSave.username != username) return@withContext false
-
-            partialSave.consumedRecently(timeProvider)
+        if (!autofillFeature.partialFormSaves().isEnabled()) {
+            logcat(WARN) { "Partial form saves are disabled. Cannot have been backFilled recently." }
+            return false
         }
+
+        val etldPlusOne = extractEtldPlusOne(url) ?: return false
+        val partialSave = backFillHistory[etldPlusOne] ?: return false
+        if (partialSave.username != username) return false
+
+        return partialSave.consumedRecently(timeProvider)
     }
 
     private fun extractEtldPlusOne(url: String) = urlMatcher.extractUrlPartsForAutofill(url).eTldPlus1

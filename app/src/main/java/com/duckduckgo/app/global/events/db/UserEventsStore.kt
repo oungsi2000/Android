@@ -17,7 +17,7 @@
 package com.duckduckgo.app.global.events.db
 
 import com.duckduckgo.common.utils.DispatcherProvider
-import kotlinx.coroutines.withContext
+import com.duckduckgo.common.utils.OnIo
 import javax.inject.Inject
 
 interface UserEventsStore {
@@ -32,27 +32,23 @@ class AppUserEventsStore @Inject constructor(
     private val dispatcher: DispatcherProvider,
 ) : UserEventsStore {
 
+    @OnIo
     override suspend fun getUserEvent(userEventKey: UserEventKey): UserEventEntity? {
-        return withContext(dispatcher.io()) {
-            userEventsDao.getUserEvent(userEventKey)
-        }
+        return userEventsDao.getUserEvent(userEventKey)
     }
 
+    @OnIo
     override suspend fun registerUserEvent(userEventKey: UserEventKey) {
-        withContext(dispatcher.io()) {
-            registerUserEvent(UserEventEntity(userEventKey))
-        }
+        registerUserEvent(UserEventEntity(userEventKey))
     }
 
+    @OnIo
     override suspend fun registerUserEvent(userEventEntity: UserEventEntity) {
-        withContext(dispatcher.io()) {
-            userEventsDao.insert(userEventEntity)
-        }
+        userEventsDao.insert(userEventEntity)
     }
 
+    @OnIo
     override suspend fun removeUserEvent(userEventKey: UserEventKey) {
-        withContext(dispatcher.io()) {
-            userEventsDao.delete(userEventKey)
-        }
+        userEventsDao.delete(userEventKey)
     }
 }

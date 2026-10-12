@@ -19,7 +19,7 @@ package com.duckduckgo.app.fire
 import android.database.sqlite.SQLiteDatabase
 import com.duckduckgo.common.utils.DefaultDispatcherProvider
 import com.duckduckgo.common.utils.DispatcherProvider
-import kotlinx.coroutines.withContext
+import com.duckduckgo.common.utils.OnIo
 import logcat.LogPriority.ERROR
 import logcat.asLog
 import logcat.logcat
@@ -39,25 +39,24 @@ class DatabaseCleanerHelper(private val dispatcherProvider: DispatcherProvider =
         return executeCommand("PRAGMA journal_mode=DELETE", databasePath)
     }
 
+    @OnIo
     private suspend fun executeCommand(
         command: String,
         databasePath: String,
     ): Boolean {
-        return withContext(dispatcherProvider.io()) {
-            if (databasePath.isNotEmpty()) {
-                var commandExecuted = false
-                openReadableDatabase(databasePath)?.use { db ->
-                    try {
-                        db.rawQuery(command, null).use { cursor -> cursor.moveToFirst() }
-                        commandExecuted = true
-                    } catch (exception: Exception) {
-                        logcat(ERROR) { exception.asLog() }
-                    }
+        if (databasePath.isNotEmpty()) {
+            var commandExecuted = false
+            openReadableDatabase(databasePath)?.use { db ->
+                try {
+                    db.rawQuery(command, null).use { cursor -> cursor.moveToFirst() }
+                    commandExecuted = true
+                } catch (exception: Exception) {
+                    logcat(ERROR) { exception.asLog() }
                 }
-                return@withContext commandExecuted
             }
-            return@withContext false
+            return commandExecuted
         }
+        return false
     }
 
     private fun openReadableDatabase(databasePath: String): SQLiteDatabase? {

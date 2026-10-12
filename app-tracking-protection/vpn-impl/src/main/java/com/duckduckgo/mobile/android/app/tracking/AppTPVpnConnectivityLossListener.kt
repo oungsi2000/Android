@@ -20,6 +20,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.VpnScope
 import com.duckduckgo.mobile.android.vpn.feature.AppTpRemoteFeatures
 import com.duckduckgo.mobile.android.vpn.service.VpnServiceCallbacks
@@ -30,7 +31,6 @@ import com.squareup.anvil.annotations.ContributesMultibinding
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.WARN
 import logcat.logcat
 import javax.inject.Inject
@@ -84,12 +84,13 @@ class AppTPVpnConnectivityLossListener @Inject constructor(
         }
     }
 
-    private suspend fun isActive(): Boolean = withContext(dispatcherProvider.io()) {
+    @OnIo
+    private suspend fun isActive(): Boolean {
         fun isFeatureEnabled(): Boolean {
             return appTpRemoteFeatures.restartOnConnectivityLoss().isEnabled()
         }
 
-        return@withContext isFeatureEnabled() && appTrackingProtection.isEnabled() && !networkProtectionState.isEnabled()
+        return isFeatureEnabled() && appTrackingProtection.isEnabled() && !networkProtectionState.isEnabled()
     }
 
     override fun onVpnStarted(coroutineScope: CoroutineScope) {

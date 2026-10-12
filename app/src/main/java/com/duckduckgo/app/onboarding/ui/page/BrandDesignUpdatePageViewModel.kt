@@ -62,6 +62,7 @@ import com.duckduckgo.app.statistics.pixels.Pixel.PixelParameter
 import com.duckduckgo.app.statistics.pixels.Pixel.PixelType.Unique
 import com.duckduckgo.app.widget.ui.WidgetCapabilities
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.FragmentScope
 import com.duckduckgo.onboarding.api.LinearOnboardingHost
 import com.duckduckgo.onboarding.api.LinearOnboardingOrchestrator
@@ -413,10 +414,10 @@ class BrandDesignUpdatePageViewModel @Inject constructor(
         notificationPermissionGranted = false
     }
 
-    private suspend fun isOnboardingImprovementsV2Enabled(): Boolean =
-        withContext(dispatchers.io()) {
-            onboardingBrandDesignUpdateToggles.onboardingImprovementsV2().isEnabled()
-        }
+    @OnIo
+    private suspend fun isOnboardingImprovementsV2Enabled(): Boolean {
+        return onboardingBrandDesignUpdateToggles.onboardingImprovementsV2().isEnabled()
+    }
 
     private fun skipDialogAnimations() {
         viewModelScope.launch {

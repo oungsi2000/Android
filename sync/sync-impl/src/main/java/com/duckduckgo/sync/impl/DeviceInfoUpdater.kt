@@ -17,6 +17,7 @@
 package com.duckduckgo.sync.impl
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.sync.impl.Result.Error
 import com.duckduckgo.sync.impl.Result.Success
@@ -28,7 +29,6 @@ import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
 import logcat.logcat
 import javax.inject.Inject
@@ -71,8 +71,9 @@ class RealDeviceInfoUpdater @Inject constructor(
 
     private val mutex = Mutex()
 
-    override suspend fun setThisDeviceName(name: String, source: DeviceInfoUpdateSource?): Result<List<DeviceV2>> = withContext(dispatchers.io()) {
-        mutex.withLock { setName(name, source) }
+    @OnIo
+    override suspend fun setThisDeviceName(name: String, source: DeviceInfoUpdateSource?): Result<List<DeviceV2>> {
+        return mutex.withLock { setName(name, source) }
     }
 
     /**

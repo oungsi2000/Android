@@ -17,6 +17,7 @@
 package com.duckduckgo.networkprotection.impl.settings.geoswitching
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.networkprotection.impl.configuration.EligibleLocation
 import com.duckduckgo.networkprotection.impl.settings.geoswitching.NetpEgressServersProvider.PreferredLocation
@@ -97,8 +98,9 @@ class RealNetpEgressServersProvider @Inject constructor(
         }
     }
 
-    override suspend fun getServerLocations(): List<ServerLocation> = withContext(dispatcherProvider.io()) {
-        netPGeoswitchingRepository.getLocations().map {
+    @OnIo
+    override suspend fun getServerLocations(): List<ServerLocation> {
+        return netPGeoswitchingRepository.getLocations().map {
             ServerLocation(
                 countryCode = it.countryCode,
                 countryName = it.countryName,

@@ -19,10 +19,10 @@ package com.duckduckgo.app.statistics.wideevents
 import com.duckduckgo.app.statistics.wideevents.WideEventClient.Companion.SAMPLED_OUT_FLOW_ID
 import com.duckduckgo.app.statistics.wideevents.db.WideEventRepository
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.Lazy
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import kotlin.random.Random
 import kotlin.runCatching
@@ -154,10 +154,10 @@ class WideEventClientImpl @Inject constructor(
         }
     }
 
-    private suspend fun isFeatureEnabled(): Boolean =
-        withContext(dispatcherProvider.io()) {
-            wideEventFeature.get().self().isEnabled()
-        }
+    @OnIo
+    private suspend fun isFeatureEnabled(): Boolean {
+        return wideEventFeature.get().self().isEnabled()
+    }
 }
 
 private fun FlowStatus.mapToWideEventStatus(): Pair<WideEventRepository.WideEventStatus, Map<String, String>> =

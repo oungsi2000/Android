@@ -27,9 +27,9 @@ import androidx.work.WorkerParameters
 import com.duckduckgo.anvil.annotations.ContributesWorker
 import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesMultibinding
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.VERBOSE
 import logcat.logcat
 import java.util.concurrent.TimeUnit
@@ -45,13 +45,12 @@ class HttpErrorDailyReportingWorker(context: Context, workerParameters: WorkerPa
     @Inject
     lateinit var dispatchers: DispatcherProvider
 
+    @OnIo
     override suspend fun doWork(): Result {
-        return withContext(dispatchers.io()) {
-            httpErrorPixels.fireCountPixel(HttpErrorPixelName.WEBVIEW_RECEIVED_HTTP_ERROR_400_DAILY)
-            httpErrorPixels.fireCountPixel(HttpErrorPixelName.WEBVIEW_RECEIVED_HTTP_ERROR_4XX_DAILY)
-            httpErrorPixels.fire5xxCountPixels()
-            return@withContext Result.success()
-        }
+        httpErrorPixels.fireCountPixel(HttpErrorPixelName.WEBVIEW_RECEIVED_HTTP_ERROR_400_DAILY)
+        httpErrorPixels.fireCountPixel(HttpErrorPixelName.WEBVIEW_RECEIVED_HTTP_ERROR_4XX_DAILY)
+        httpErrorPixels.fire5xxCountPixels()
+        return Result.success()
     }
 }
 

@@ -27,12 +27,12 @@ import androidx.work.WorkerParameters
 import com.duckduckgo.anvil.annotations.ContributesWorker
 import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.privacy.config.impl.PrivacyConfigDownloader
 import com.duckduckgo.privacy.config.impl.PrivacyConfigDownloader.ConfigDownloadResult.Success
 import com.squareup.anvil.annotations.ContributesMultibinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.VERBOSE
 import logcat.logcat
 import java.util.concurrent.TimeUnit
@@ -49,14 +49,13 @@ class PrivacyConfigDownloadWorker(
     @Inject
     lateinit var dispatcherProvider: DispatcherProvider
 
+    @OnIo
     override suspend fun doWork(): Result {
-        return withContext(dispatcherProvider.io()) {
-            val result = privacyConfigDownloader.download()
-            return@withContext if (result is Success) {
-                Result.success()
-            } else {
-                Result.retry()
-            }
+        val result = privacyConfigDownloader.download()
+        return if (result is Success) {
+            Result.success()
+        } else {
+            Result.retry()
         }
     }
 }

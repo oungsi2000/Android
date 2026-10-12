@@ -28,9 +28,9 @@ import com.duckduckgo.autofill.impl.store.ReAuthenticationDetails
 import com.duckduckgo.autofill.impl.store.emptyReAuthenticationDetails
 import com.duckduckgo.browsermode.api.BrowserMode
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface AutofillAvailableInputTypesProvider {
@@ -58,31 +58,30 @@ class RealAutofillAvailableInputTypesProvider @Inject constructor(
     private val dispatchers: DispatcherProvider,
 ) : AutofillAvailableInputTypesProvider {
 
+    @OnIo
     override suspend fun getTypes(
         url: String?,
         reAuthenticationDetails: ReAuthenticationDetails,
         browserMode: BrowserMode,
     ): AvailableInputTypes {
-        return withContext(dispatchers.io()) {
-            val availableInputTypeCredentials = determineIfCredentialsAvailable(url)
-            val reauthCredentials = determineIfReauthenticationDetailsAvailable(reAuthenticationDetails)
+        val availableInputTypeCredentials = determineIfCredentialsAvailable(url)
+        val reauthCredentials = determineIfReauthenticationDetailsAvailable(reAuthenticationDetails)
 
-            val finalCredentials = AvailableInputTypeCredentials(
-                username = availableInputTypeCredentials.username || reauthCredentials.username,
-                password = availableInputTypeCredentials.password || reauthCredentials.password,
-            )
+        val finalCredentials = AvailableInputTypeCredentials(
+            username = availableInputTypeCredentials.username || reauthCredentials.username,
+            password = availableInputTypeCredentials.password || reauthCredentials.password,
+        )
 
-            val credentialsAvailableOnThisPage = finalCredentials.username || finalCredentials.password
-            val emailAvailable = determineIfEmailAvailable()
-            val importPromoAvailable = inBrowserPromo.canShowPromo(credentialsAvailableOnThisPage, url, browserMode)
+        val credentialsAvailableOnThisPage = finalCredentials.username || finalCredentials.password
+        val emailAvailable = determineIfEmailAvailable()
+        val importPromoAvailable = inBrowserPromo.canShowPromo(credentialsAvailableOnThisPage, url, browserMode)
 
-            AvailableInputTypes(
-                username = finalCredentials.username,
-                password = finalCredentials.password,
-                email = emailAvailable,
-                credentialsImport = importPromoAvailable,
-            )
-        }
+        return AvailableInputTypes(
+            username = finalCredentials.username,
+            password = finalCredentials.password,
+            email = emailAvailable,
+            credentialsImport = importPromoAvailable,
+        )
     }
 
     private suspend fun determineIfCredentialsAvailable(url: String?): AvailableInputTypeCredentials {

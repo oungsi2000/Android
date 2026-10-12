@@ -18,9 +18,9 @@ package com.duckduckgo.app.statistics.wideevents
 
 import com.duckduckgo.app.statistics.wideevents.db.WideEventRepository
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Named
 
@@ -41,11 +41,13 @@ class DelegatingWideEventSender @Inject constructor(
         }
     }
 
-    private suspend fun shouldUsePixelSender(): Boolean = withContext(dispatcherProvider.io()) {
-        wideEventFeature.sendWideEventsViaPixels().isEnabled()
+    @OnIo
+    private suspend fun shouldUsePixelSender(): Boolean {
+        return wideEventFeature.sendWideEventsViaPixels().isEnabled()
     }
 
-    private suspend fun shouldUseApiSender(): Boolean = withContext(dispatcherProvider.io()) {
-        wideEventFeature.sendWideEventsViaPost().isEnabled()
+    @OnIo
+    private suspend fun shouldUseApiSender(): Boolean {
+        return wideEventFeature.sendWideEventsViaPost().isEnabled()
     }
 }

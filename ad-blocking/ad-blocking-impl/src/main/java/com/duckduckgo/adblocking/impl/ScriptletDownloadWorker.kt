@@ -36,6 +36,7 @@ import com.duckduckgo.anvil.annotations.ContributesWorker
 import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesMultibinding
 import com.squareup.moshi.JsonAdapter
@@ -46,7 +47,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.WARN
 import logcat.asLog
 import logcat.logcat
@@ -70,19 +70,20 @@ class ScriptletDownloadWorker(
 
     private val settingsAdapter by lazy { buildJsonAdapter() }
 
-    override suspend fun doWork(): Result = withContext(dispatchers.io()) {
+    @OnIo
+    override suspend fun doWork(): Result {
         if (!feature.self().isEnabled()) {
             logcat { "ScriptletDownloadWorker: kill-switch is off, skipping" }
-            return@withContext Result.success()
+            return Result.success()
         }
         logcat { "Starting ScriptletDownloadWorker" }
-        val settingsJson = inputData.getString(KEY_SETTINGS) ?: return@withContext Result.failure()
+        val settingsJson = inputData.getString(KEY_SETTINGS) ?: return Result.failure()
         val settings = runCatching { settingsAdapter.fromJson(settingsJson) }
             .onFailure { logcat(WARN) { "ScriptletDownloadWorker: failed to parse settings input: ${it.asLog()}" } }
             .getOrNull()
-            ?: return@withContext Result.failure()
+            ?: return Result.failure()
 
-        when (updater.update(settings)) {
+        return when (updater.update(settings)) {
             ScriptletUpdateResult.Success -> Result.success()
             ScriptletUpdateResult.Retry -> Result.retry()
         }

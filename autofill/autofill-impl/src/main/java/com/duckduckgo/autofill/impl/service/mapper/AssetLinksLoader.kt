@@ -17,10 +17,10 @@
 package com.duckduckgo.autofill.impl.service.mapper
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.normalizeScheme
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
 import logcat.asLog
 import logcat.logcat
@@ -38,23 +38,22 @@ class RealAssetLinksLoader @Inject constructor(
     private val assetLinksService: AssetLinksService,
     private val dispatcherProvider: DispatcherProvider,
 ) : AssetLinksLoader {
+    @OnIo
     override suspend fun getValidTargetApps(domain: String): Map<String, List<String>> {
-        return withContext(dispatcherProvider.io()) {
-            kotlin.runCatching {
-                assetLinksService.getAssetLinks("${domain.normalizeScheme()}$ASSET_LINKS_PATH").also {
-                    logcat { "Autofill-mapping: Assetlinks of $domain: ${it.size}" }
-                }.filter {
-                    it.relation.any { relation -> relation in supportedRelations } &&
-                        !it.target.package_name.isNullOrEmpty() &&
-                        !it.target.sha256_cert_fingerprints.isNullOrEmpty() &&
-                        it.target.namespace == APP_NAMESPACE
-                }.associate { it.target.package_name!! to it.target.sha256_cert_fingerprints!! }
-            }.getOrElse {
-                // This can fail for a lot of reasons: invalid url from package name, absence of assetlinks, malformed assetlinks
-                // If it does, we don't want to crash the app. We only want to return empty
-                logcat(ERROR) { "Autofill-mapping: Failed to obtain assetlinks for: $domain: ${it.asLog()}" }
-                emptyMap()
-            }
+        return kotlin.runCatching {
+            assetLinksService.getAssetLinks("${domain.normalizeScheme()}$ASSET_LINKS_PATH").also {
+                logcat { "Autofill-mapping: Assetlinks of $domain: ${it.size}" }
+            }.filter {
+                it.relation.any { relation -> relation in supportedRelations } &&
+                    !it.target.package_name.isNullOrEmpty() &&
+                    !it.target.sha256_cert_fingerprints.isNullOrEmpty() &&
+                    it.target.namespace == APP_NAMESPACE
+            }.associate { it.target.package_name!! to it.target.sha256_cert_fingerprints!! }
+        }.getOrElse {
+            // This can fail for a lot of reasons: invalid url from package name, absence of assetlinks, malformed assetlinks
+            // If it does, we don't want to crash the app. We only want to return empty
+            logcat(ERROR) { "Autofill-mapping: Failed to obtain assetlinks for: $domain: ${it.asLog()}" }
+            emptyMap()
         }
     }
 

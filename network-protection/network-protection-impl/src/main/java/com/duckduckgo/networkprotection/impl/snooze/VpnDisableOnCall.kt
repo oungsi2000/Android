@@ -20,6 +20,7 @@ import android.content.Context
 import android.content.Intent
 import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.feature.toggles.api.Toggle
 import com.duckduckgo.networkprotection.impl.settings.NetPSettingsLocalConfig
@@ -27,7 +28,6 @@ import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface VpnDisableOnCall {
@@ -60,7 +60,8 @@ class RealVpnDisableOnCall @Inject constructor(
         }
     }
 
-    override suspend fun isEnabled(): Boolean = withContext(dispatcherProvider.io()) {
-        return@withContext netPSettingsLocalConfig.vpnPauseDuringCalls().isEnabled()
+    @OnIo
+    override suspend fun isEnabled(): Boolean {
+        return netPSettingsLocalConfig.vpnPauseDuringCalls().isEnabled()
     }
 }

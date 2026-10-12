@@ -17,13 +17,13 @@
 package com.duckduckgo.networkprotection.impl.autoexclude
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.ActivityScope
 import com.duckduckgo.networkprotection.impl.autoexclude.AutoExcludePrompt.Trigger
 import com.duckduckgo.networkprotection.impl.autoexclude.AutoExcludePrompt.Trigger.NEW_INCOMPATIBLE_APP_FOUND
 import com.duckduckgo.networkprotection.store.NetPManualExclusionListRepository
 import com.duckduckgo.networkprotection.store.db.VpnIncompatibleApp
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface AutoExcludePrompt {
@@ -46,23 +46,22 @@ class RealAutoExcludePrompt @Inject constructor(
     private val autoExcludeAppsRepository: AutoExcludeAppsRepository,
     private val dispatcherProvider: DispatcherProvider,
 ) : AutoExcludePrompt {
+    @OnIo
     override suspend fun getAppsForPrompt(trigger: Trigger): List<VpnIncompatibleApp> {
-        return withContext(dispatcherProvider.io()) {
-            val manuallyExcludedApps = netPManualExclusionListRepository.getManualAppExclusionList().filter {
-                !it.isProtected
-            }.map {
-                it.packageId
-            }
+        val manuallyExcludedApps = netPManualExclusionListRepository.getManualAppExclusionList().filter {
+            !it.isProtected
+        }.map {
+            it.packageId
+        }
 
-            if (trigger == NEW_INCOMPATIBLE_APP_FOUND) {
-                getFlaggedAppsForPrompt().also {
-                    autoExcludeAppsRepository.markAppsAsShown(it)
-                }
-            } else {
-                getInstalledProtectedIncompatibleApps()
-            }.filter {
-                !manuallyExcludedApps.contains(it.packageName)
+        return if (trigger == NEW_INCOMPATIBLE_APP_FOUND) {
+            getFlaggedAppsForPrompt().also {
+                autoExcludeAppsRepository.markAppsAsShown(it)
             }
+        } else {
+            getInstalledProtectedIncompatibleApps()
+        }.filter {
+            !manuallyExcludedApps.contains(it.packageName)
         }
     }
 

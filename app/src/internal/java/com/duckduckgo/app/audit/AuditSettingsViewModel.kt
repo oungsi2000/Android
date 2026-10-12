@@ -21,12 +21,12 @@ import androidx.lifecycle.viewModelScope
 import com.duckduckgo.anvil.annotations.ContributesViewModel
 import com.duckduckgo.app.privacy.db.UserAllowListDao
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.ActivityScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @ContributesViewModel(ActivityScope::class)
@@ -70,19 +70,17 @@ class AuditSettingsViewModel @Inject constructor(
         }
     }
 
+    @OnIo
     private suspend fun removeProtections() {
-        withContext(dispatchers.io()) {
-            domainsUsed.map {
-                userAllowListDao.insert(it)
-            }
+        domainsUsed.map {
+            userAllowListDao.insert(it)
         }
     }
 
+    @OnIo
     private suspend fun reAddProtections() {
-        withContext(dispatchers.io()) {
-            domainsUsed.map {
-                userAllowListDao.delete(it)
-            }
+        domainsUsed.map {
+            userAllowListDao.delete(it)
         }
     }
 

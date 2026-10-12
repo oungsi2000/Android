@@ -19,6 +19,7 @@ package com.duckduckgo.autofill.impl.store
 import com.duckduckgo.autofill.impl.securestorage.SecureStorage
 import com.duckduckgo.autofill.impl.urlmatcher.AutofillUrlMatcher
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
@@ -54,11 +55,10 @@ class RealNeverSavedSiteRepository @Inject constructor(
         return secureStorage.neverSaveListCount()
     }
 
+    @OnIo
     override suspend fun isInNeverSaveList(url: String): Boolean {
-        return withContext(dispatchers.io()) {
-            val domainToAdd = url.extractEffectiveTldPlusOne()
-            secureStorage.isInNeverSaveList(domainToAdd)
-        }
+        val domainToAdd = url.extractEffectiveTldPlusOne()
+        return secureStorage.isInNeverSaveList(domainToAdd)
     }
 
     private fun String.extractEffectiveTldPlusOne(): String {

@@ -20,10 +20,10 @@ import com.duckduckgo.autofill.api.domain.app.LoginCredentials
 import com.duckduckgo.autofill.api.store.AutofillStore
 import com.duckduckgo.autofill.impl.service.AutofillServiceFeature
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import javax.inject.Inject
 
@@ -42,11 +42,12 @@ class RealAppCredentialProvider @Inject constructor(
     private val autofillStore: AutofillStore,
     private val autofillServiceFeature: AutofillServiceFeature,
 ) : AppCredentialProvider {
-    override suspend fun getCredentials(appPackage: String): List<LoginCredentials> = withContext(dispatcherProvider.io()) {
-        if (autofillServiceFeature.canMapAppToDomain().isEnabled().not()) return@withContext emptyList()
+    @OnIo
+    override suspend fun getCredentials(appPackage: String): List<LoginCredentials> {
+        if (autofillServiceFeature.canMapAppToDomain().isEnabled().not()) return emptyList()
 
         logcat { "Autofill-mapping: Getting credentials for $appPackage" }
-        return@withContext appToDomainMapper.getAssociatedDomains(appPackage).map {
+        return appToDomainMapper.getAssociatedDomains(appPackage).map {
             getAllCredentialsFromDomain(it)
         }.flatten().distinct().also {
             logcat { "Autofill-mapping: Total credentials for $appPackage : ${it.size}" }

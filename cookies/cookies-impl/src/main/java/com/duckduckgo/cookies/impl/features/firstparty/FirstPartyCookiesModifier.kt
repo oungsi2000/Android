@@ -26,6 +26,7 @@ import com.duckduckgo.app.privacy.db.UserAllowListRepository
 import com.duckduckgo.app.statistics.pixels.Pixel
 import com.duckduckgo.common.utils.AppUrl
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.cookies.impl.CookiesPixelName.COOKIE_EXPIRE_ERROR
 import com.duckduckgo.cookies.impl.SQLCookieRemover
 import com.duckduckgo.cookies.impl.redactStacktraceInBase64
@@ -34,7 +35,6 @@ import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.duckchat.api.DuckAiHostProvider
 import com.duckduckgo.privacy.config.api.UnprotectedTemporary
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import logcat.asLog
 import javax.inject.Inject
 import javax.inject.Named
@@ -57,12 +57,11 @@ class RealFirstPartyCookiesModifier @Inject constructor(
 
     private val databaseErrorHandler = DatabaseErrorHandler()
 
+    @OnIo
     override suspend fun expireFirstPartyCookies() {
-        withContext(dispatcherProvider.io()) {
-            val databasePath: String = webViewDatabaseLocator.getDatabasePath()
-            if (databasePath.isNotEmpty()) {
-                expireFirstPartyCookies(databasePath)
-            }
+        val databasePath: String = webViewDatabaseLocator.getDatabasePath()
+        if (databasePath.isNotEmpty()) {
+            expireFirstPartyCookies(databasePath)
         }
     }
 

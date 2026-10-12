@@ -27,6 +27,7 @@ import com.duckduckgo.app.onboarding.store.AppStage
 import com.duckduckgo.app.onboarding.store.UserStageStore
 import com.duckduckgo.app.settings.db.SettingsDataStore
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.ActivityScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -71,21 +72,20 @@ class OnboardingDevSettingsViewModel @Inject constructor(
         }
     }
 
+    @OnIo
     private suspend fun loadState() {
-        withContext(dispatchers.io()) {
-            val stage = userStageStore.getUserAppStage()
-            val hideTips = settingsDataStore.hideTips
-            val completed = stage == AppStage.ESTABLISHED
-            val skipped = completed && hideTips
-            val visibleCtas = visibleCtaIds()
-            val ctaStates = visibleCtas.associateWith { dismissedCtaDao.exists(it) }
-            _viewState.value = ViewState(
-                onboardingCompleted = completed,
-                onboardingSkipped = skipped,
-                ctaDismissedStates = ctaStates,
-                visibleCtaIds = visibleCtas,
-            )
-        }
+        val stage = userStageStore.getUserAppStage()
+        val hideTips = settingsDataStore.hideTips
+        val completed = stage == AppStage.ESTABLISHED
+        val skipped = completed && hideTips
+        val visibleCtas = visibleCtaIds()
+        val ctaStates = visibleCtas.associateWith { dismissedCtaDao.exists(it) }
+        _viewState.value = ViewState(
+            onboardingCompleted = completed,
+            onboardingSkipped = skipped,
+            ctaDismissedStates = ctaStates,
+            visibleCtaIds = visibleCtas,
+        )
     }
 
     fun onOnboardingCompletedToggled(checked: Boolean) {

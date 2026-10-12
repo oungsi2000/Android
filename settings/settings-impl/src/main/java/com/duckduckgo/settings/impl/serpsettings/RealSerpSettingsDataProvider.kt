@@ -18,6 +18,7 @@ package com.duckduckgo.settings.impl.serpsettings
 
 import com.duckduckgo.app.statistics.pixels.Pixel
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.settings.api.SerpSettingsDataProvider
 import com.duckduckgo.settings.impl.serpsettings.pixel.SerpSettingsPixelName
@@ -29,7 +30,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import javax.inject.Inject
 
@@ -47,25 +47,24 @@ class RealSerpSettingsDataProvider @Inject constructor(
             .distinctUntilChanged()
             .flowOn(dispatcherProvider.io())
 
+    @OnIo
     override suspend fun setSetting(key: String, value: String) {
-        withContext(dispatcherProvider.io()) {
-            // Merge inside a single transaction so a concurrent SERP updateNativeSettings can't clobber this write.
-            serpSettingsDataStore.updateSerpSettings { current ->
-                val json = if (current.isNullOrEmpty()) {
+        // Merge inside a single transaction so a concurrent SERP updateNativeSettings can't clobber this write.
+        serpSettingsDataStore.updateSerpSettings { current ->
+            val json = if (current.isNullOrEmpty()) {
+                JSONObject()
+            } else {
+                runCatching { JSONObject(current) }.getOrElse {
+                    // The stored blob couldn't be parsed; we discard it and start fresh.
+                    pixel.fireSerpSettingsCountAndDaily(
+                        countPixel = SerpSettingsPixelName.SERP_SETTINGS_SERIALIZATION_FAILED_COUNT,
+                        dailyPixel = SerpSettingsPixelName.SERP_SETTINGS_SERIALIZATION_FAILED_DAILY,
+                    )
                     JSONObject()
-                } else {
-                    runCatching { JSONObject(current) }.getOrElse {
-                        // The stored blob couldn't be parsed; we discard it and start fresh.
-                        pixel.fireSerpSettingsCountAndDaily(
-                            countPixel = SerpSettingsPixelName.SERP_SETTINGS_SERIALIZATION_FAILED_COUNT,
-                            dailyPixel = SerpSettingsPixelName.SERP_SETTINGS_SERIALIZATION_FAILED_DAILY,
-                        )
-                        JSONObject()
-                    }
                 }
-                json.put(key, value)
-                json.toString()
             }
+            json.put(key, value)
+            json.toString()
         }
     }
 

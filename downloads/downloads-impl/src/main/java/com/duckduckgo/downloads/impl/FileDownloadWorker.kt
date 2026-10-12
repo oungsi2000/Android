@@ -26,10 +26,10 @@ import androidx.work.WorkerParameters
 import com.duckduckgo.anvil.annotations.ContributesWorker
 import com.duckduckgo.browsermode.api.BrowserMode
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.downloads.api.DownloadFailReason
 import com.duckduckgo.downloads.api.FileDownloader
-import kotlinx.coroutines.withContext
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -49,7 +49,8 @@ class FileDownloadWorker(
 
     @Inject lateinit var dispatcherProvider: DispatcherProvider
 
-    override suspend fun doWork(): Result = withContext(dispatcherProvider.io()) {
+    @OnIo
+    override suspend fun doWork(): Result {
         val pending = inputData.toPendingFileDownload()
 
         when {
@@ -58,7 +59,7 @@ class FileDownloadWorker(
             else -> callback.onError(url = pending.url, reason = DownloadFailReason.UnsupportedUrlType)
         }
 
-        Result.success()
+        return Result.success()
     }
 }
 

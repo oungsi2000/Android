@@ -19,6 +19,7 @@ package com.duckduckgo.pir.impl.store
 import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.common.utils.CurrentTimeProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.pir.impl.models.scheduling.JobRecord.EmailConfirmationJobRecord
 import com.duckduckgo.pir.impl.models.scheduling.JobRecord.OptOutJobRecord
@@ -37,7 +38,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
 import logcat.logcat
 import javax.inject.Inject
@@ -163,76 +163,75 @@ class RealPirSchedulingRepository @Inject constructor(
         prepareDatabase()
     }
 
-    override suspend fun getAllValidScanJobRecords(): List<ScanJobRecord> =
-        withContext(dispatcherProvider.io()) {
-            return@withContext jobSchedulingDao()
-                ?.getAllScanJobRecords()
-                ?.map { it.toRecord() }
-                // do not pick-up deprecated jobs as they belong to removed profiles
-                ?.filter { !it.deprecated }
-                .orEmpty()
-        }
+    @OnIo
+    override suspend fun getAllValidScanJobRecords(): List<ScanJobRecord> {
+        return jobSchedulingDao()
+            ?.getAllScanJobRecords()
+            ?.map { it.toRecord() }
+            // do not pick-up deprecated jobs as they belong to removed profiles
+            ?.filter { !it.deprecated }
+            .orEmpty()
+    }
 
+    @OnIo
     override suspend fun getValidScanJobRecord(
         brokerName: String,
         userProfileId: Long,
-    ): ScanJobRecord? =
-        withContext(dispatcherProvider.io()) {
-            return@withContext jobSchedulingDao()
-                ?.getScanJobRecord(brokerName, userProfileId)
-                ?.run { this.toRecord() }
-                // do not pick-up deprecated jobs as they belong to removed profiles
-                ?.takeIf { !it.deprecated }
-        }
+    ): ScanJobRecord? {
+        return jobSchedulingDao()
+            ?.getScanJobRecord(brokerName, userProfileId)
+            ?.run { this.toRecord() }
+            // do not pick-up deprecated jobs as they belong to removed profiles
+            ?.takeIf { !it.deprecated }
+    }
 
+    @OnIo
     override suspend fun getValidOptOutJobRecord(
         extractedProfileId: Long,
         includeDeprecated: Boolean,
-    ): OptOutJobRecord? =
-        withContext(dispatcherProvider.io()) {
-            return@withContext jobSchedulingDao()
-                ?.getOptOutJobRecord(extractedProfileId)
-                ?.run { this.toRecord() }
-                // do not pick-up deprecated jobs as they belong to removed profiles
-                ?.takeIf { includeDeprecated || !it.deprecated }
-        }
+    ): OptOutJobRecord? {
+        return jobSchedulingDao()
+            ?.getOptOutJobRecord(extractedProfileId)
+            ?.run { this.toRecord() }
+            // do not pick-up deprecated jobs as they belong to removed profiles
+            ?.takeIf { includeDeprecated || !it.deprecated }
+    }
 
-    override suspend fun getAllValidOptOutJobRecords(): List<OptOutJobRecord> =
-        withContext(dispatcherProvider.io()) {
-            return@withContext jobSchedulingDao()
-                ?.getAllOptOutJobRecords()
-                ?.map { record -> record.toRecord() }
-                // do not pick-up deprecated jobs as they belong to removed profiles
-                ?.filter { !it.deprecated }
-                .orEmpty()
-        }
+    @OnIo
+    override suspend fun getAllValidOptOutJobRecords(): List<OptOutJobRecord> {
+        return jobSchedulingDao()
+            ?.getAllOptOutJobRecords()
+            ?.map { record -> record.toRecord() }
+            // do not pick-up deprecated jobs as they belong to removed profiles
+            ?.filter { !it.deprecated }
+            .orEmpty()
+    }
 
-    override suspend fun getAllValidOptOutJobRecordsForBroker(brokerName: String): List<OptOutJobRecord> =
-        withContext(dispatcherProvider.io()) {
-            return@withContext jobSchedulingDao()
-                ?.getAllOptOutJobRecordsForBroker(brokerName)
-                ?.map { record -> record.toRecord() }
-                // do not pick-up deprecated jobs as they belong to removed profiles
-                ?.filter { !it.deprecated }
-                .orEmpty()
-        }
+    @OnIo
+    override suspend fun getAllValidOptOutJobRecordsForBroker(brokerName: String): List<OptOutJobRecord> {
+        return jobSchedulingDao()
+            ?.getAllOptOutJobRecordsForBroker(brokerName)
+            ?.map { record -> record.toRecord() }
+            // do not pick-up deprecated jobs as they belong to removed profiles
+            ?.filter { !it.deprecated }
+            .orEmpty()
+    }
 
+    @OnIo
     override suspend fun saveScanJobRecord(scanJobRecord: ScanJobRecord) {
-        withContext(dispatcherProvider.io()) {
-            jobSchedulingDao()?.saveScanJobRecord(scanJobRecord.toEntity())
-        }
+        jobSchedulingDao()?.saveScanJobRecord(scanJobRecord.toEntity())
     }
 
+    @OnIo
     override suspend fun saveScanJobRecords(scanJobRecords: List<ScanJobRecord>) {
-        withContext(dispatcherProvider.io()) {
-            scanJobRecords
-                .map { it.toEntity() }
-                .also {
-                    jobSchedulingDao()?.saveScanJobRecords(it)
-                }
-        }
+        scanJobRecords
+            .map { it.toEntity() }
+            .also {
+                jobSchedulingDao()?.saveScanJobRecords(it)
+            }
     }
 
+    @OnIo
     override suspend fun updateScanJobRecordStatus(
         newStatus: ScanJobStatus,
         newLastScanDateMillis: Long,
@@ -240,138 +239,122 @@ class RealPirSchedulingRepository @Inject constructor(
         profileQueryId: Long,
         deprecated: Boolean,
     ) {
-        withContext(dispatcherProvider.io()) {
-            jobSchedulingDao()?.updateScanJobRecordStatus(
-                brokerName = brokerName,
-                profileQueryId = profileQueryId,
-                newStatus = newStatus.name,
-                newLastScanDateMillis = newLastScanDateMillis,
-                deprecated = deprecated,
-            )
-        }
+        jobSchedulingDao()?.updateScanJobRecordStatus(
+            brokerName = brokerName,
+            profileQueryId = profileQueryId,
+            newStatus = newStatus.name,
+            newLastScanDateMillis = newLastScanDateMillis,
+            deprecated = deprecated,
+        )
     }
 
+    @OnIo
     override suspend fun saveOptOutJobRecord(optOutJobRecord: OptOutJobRecord) {
-        withContext(dispatcherProvider.io()) {
-            optOutJobRecord
-                .toEntity()
-                .also {
-                    jobSchedulingDao()?.saveOptOutJobRecord(it)
-                }
-        }
+        optOutJobRecord
+            .toEntity()
+            .also {
+                jobSchedulingDao()?.saveOptOutJobRecord(it)
+            }
     }
 
+    @OnIo
     override suspend fun saveOptOutJobRecords(optOutJobRecords: List<OptOutJobRecord>) {
-        withContext(dispatcherProvider.io()) {
-            optOutJobRecords
-                .map { it.toEntity() }
-                .also {
-                    jobSchedulingDao()?.saveOptOutJobRecords(it)
-                }
-        }
+        optOutJobRecords
+            .map { it.toEntity() }
+            .also {
+                jobSchedulingDao()?.saveOptOutJobRecords(it)
+            }
     }
 
+    @OnIo
     override suspend fun deleteAllScanJobRecords() {
-        withContext(dispatcherProvider.io()) {
-            jobSchedulingDao()?.deleteAllScanJobRecords()
-        }
+        jobSchedulingDao()?.deleteAllScanJobRecords()
     }
 
+    @OnIo
     override suspend fun deleteJobRecordsForProfiles(profileQueryIds: List<Long>) {
-        withContext(dispatcherProvider.io()) {
-            jobSchedulingDao()?.deleteJobRecordsForProfiles(profileQueryIds)
-        }
+        jobSchedulingDao()?.deleteJobRecordsForProfiles(profileQueryIds)
     }
 
+    @OnIo
     override suspend fun deleteScanJobRecordsWithoutMatchesForProfiles(profileQueryIds: List<Long>) {
-        withContext(dispatcherProvider.io()) {
-            jobSchedulingDao()?.deleteScanJobRecordsWithoutMatchesForProfiles(profileQueryIds)
-        }
+        jobSchedulingDao()?.deleteScanJobRecordsWithoutMatchesForProfiles(profileQueryIds)
     }
 
+    @OnIo
     override suspend fun deleteAllOptOutJobRecords() {
-        withContext(dispatcherProvider.io()) {
-            jobSchedulingDao()?.deleteAllOptOutJobRecords()
-        }
+        jobSchedulingDao()?.deleteAllOptOutJobRecords()
     }
 
+    @OnIo
     override suspend fun saveEmailConfirmationJobRecord(emailConfirmationJobRecord: EmailConfirmationJobRecord) {
-        withContext(dispatcherProvider.io()) {
-            jobSchedulingDao()?.saveEmailConfirmationJobRecord(emailConfirmationJobRecord.toEntity())
-        }
+        jobSchedulingDao()?.saveEmailConfirmationJobRecord(emailConfirmationJobRecord.toEntity())
     }
 
-    override suspend fun getEmailConfirmationJobsWithNoLink(): List<EmailConfirmationJobRecord> =
-        withContext(dispatcherProvider.io()) {
-            return@withContext jobSchedulingDao()?.getAllActiveEmailConfirmationJobRecordsWithNoLink()?.map {
-                it.toRecord()
-            }.orEmpty()
-        }
+    @OnIo
+    override suspend fun getEmailConfirmationJobsWithNoLink(): List<EmailConfirmationJobRecord> {
+        return jobSchedulingDao()?.getAllActiveEmailConfirmationJobRecordsWithNoLink()?.map {
+            it.toRecord()
+        }.orEmpty()
+    }
 
-    override suspend fun getEmailConfirmationJobsWithLink(): List<EmailConfirmationJobRecord> =
-        withContext(dispatcherProvider.io()) {
-            return@withContext jobSchedulingDao()?.getAllActiveEmailConfirmationJobRecordsWithLink()?.map {
-                it.toRecord()
-            }.orEmpty()
-        }
+    @OnIo
+    override suspend fun getEmailConfirmationJobsWithLink(): List<EmailConfirmationJobRecord> {
+        return jobSchedulingDao()?.getAllActiveEmailConfirmationJobRecordsWithLink()?.map {
+            it.toRecord()
+        }.orEmpty()
+    }
 
-    override suspend fun getEmailConfirmationJob(extractedProfileId: Long): EmailConfirmationJobRecord? =
-        withContext(dispatcherProvider.io()) {
-            return@withContext jobSchedulingDao()?.getEmailConfirmationJobRecord(extractedProfileId)?.toRecord()
-        }
+    @OnIo
+    override suspend fun getEmailConfirmationJob(extractedProfileId: Long): EmailConfirmationJobRecord? {
+        return jobSchedulingDao()?.getEmailConfirmationJobRecord(extractedProfileId)?.toRecord()
+    }
 
+    @OnIo
     override suspend fun deleteEmailConfirmationJobRecord(extractedProfileId: Long) {
-        withContext(dispatcherProvider.io()) {
-            jobSchedulingDao()?.deleteEmailConfirmationJobRecord(extractedProfileId)
-        }
+        jobSchedulingDao()?.deleteEmailConfirmationJobRecord(extractedProfileId)
     }
 
+    @OnIo
     override suspend fun deleteAllEmailConfirmationJobRecords() {
-        withContext(dispatcherProvider.io()) {
-            jobSchedulingDao()?.deleteAllEmailConfirmationJobRecords()
-        }
+        jobSchedulingDao()?.deleteAllEmailConfirmationJobRecords()
     }
 
+    @OnIo
     override suspend fun markOptOutDay7ConfirmationPixelSent(
         extractedProfileId: Long,
         timestampMs: Long,
     ) {
-        withContext(dispatcherProvider.io()) {
-            jobSchedulingDao()?.updateSevenDayConfirmationReportSentDate(extractedProfileId, timestampMs)
-        }
+        jobSchedulingDao()?.updateSevenDayConfirmationReportSentDate(extractedProfileId, timestampMs)
     }
 
+    @OnIo
     override suspend fun markOptOutDay14ConfirmationPixelSent(
         extractedProfileId: Long,
         timestampMs: Long,
     ) {
-        withContext(dispatcherProvider.io()) {
-            jobSchedulingDao()?.update14DayConfirmationReportSentDate(extractedProfileId, timestampMs)
-        }
+        jobSchedulingDao()?.update14DayConfirmationReportSentDate(extractedProfileId, timestampMs)
     }
 
+    @OnIo
     override suspend fun markOptOutDay21ConfirmationPixelSent(
         extractedProfileId: Long,
         timestampMs: Long,
     ) {
-        withContext(dispatcherProvider.io()) {
-            jobSchedulingDao()?.update21DayConfirmationReportSentDate(extractedProfileId, timestampMs)
-        }
+        jobSchedulingDao()?.update21DayConfirmationReportSentDate(extractedProfileId, timestampMs)
     }
 
+    @OnIo
     override suspend fun markOptOutDay42ConfirmationPixelSent(
         extractedProfileId: Long,
         timestampMs: Long,
     ) {
-        withContext(dispatcherProvider.io()) {
-            jobSchedulingDao()?.update42DayConfirmationReportSentDate(extractedProfileId, timestampMs)
-        }
+        jobSchedulingDao()?.update42DayConfirmationReportSentDate(extractedProfileId, timestampMs)
     }
 
+    @OnIo
     override suspend fun clearAllData() {
-        withContext(dispatcherProvider.io()) {
-            jobSchedulingDao()?.deleteAll()
-        }
+        jobSchedulingDao()?.deleteAll()
     }
 
     private fun ScanJobRecordEntity.toRecord(): ScanJobRecord =

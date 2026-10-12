@@ -21,8 +21,8 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.duckduckgo.anvil.annotations.ContributesWorker
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.VERBOSE
 import logcat.LogPriority.WARN
 import logcat.logcat
@@ -53,10 +53,9 @@ class DeleteMediaCaptureWorker(
     @Inject
     lateinit var dispatchers: DispatcherProvider
 
+    @OnIo
     override suspend fun doWork(): Result {
-        return withContext(dispatchers.io()) {
-            deleteFile()
-        }
+        return deleteFile()
     }
 
     private fun deleteFile(): Result {

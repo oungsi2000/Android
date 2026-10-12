@@ -17,6 +17,7 @@
 package com.duckduckgo.pir.impl.common
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.pir.impl.common.CaptchaResolver.CaptchaResolverError.ClientFailure
 import com.duckduckgo.pir.impl.common.CaptchaResolver.CaptchaResolverError.CriticalFailure
@@ -35,7 +36,6 @@ import com.duckduckgo.pir.impl.service.ResponseError
 import com.duckduckgo.pir.impl.service.parseError
 import com.squareup.anvil.annotations.ContributesBinding
 import com.squareup.moshi.Moshi
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import retrofit2.HttpException
 import javax.inject.Inject
@@ -102,14 +102,15 @@ class RealCaptchaResolver @Inject constructor(
 ) : CaptchaResolver {
     private val adapter = moshi.adapter(ResponseError::class.java)
 
+    @OnIo
     override suspend fun submitCaptchaInformation(
         siteKey: String,
         url: String,
         type: String,
         attemptId: String?,
-    ): CaptchaResolverResult = withContext(dispatcherProvider.io()) {
+    ): CaptchaResolverResult {
         // https://dub.duckduckgo.com/duckduckgo/dbp-api?tab=readme-ov-file#post-dbpcaptchav0submit
-        runCatching {
+        return runCatching {
             dbpService.submitCaptchaInformation(
                 PirStartCaptchaSolutionBody(
                     siteKey = siteKey,
@@ -155,12 +156,13 @@ class RealCaptchaResolver @Inject constructor(
         }
     }
 
+    @OnIo
     override suspend fun getCaptchaSolution(
         transactionID: String,
         attemptId: String?,
-    ): CaptchaResolverResult = withContext(dispatcherProvider.io()) {
+    ): CaptchaResolverResult {
         // https://dub.duckduckgo.com/duckduckgo/dbp-api?tab=readme-ov-file#get-dbpcaptchav0resulttransactionidtransaction_id
-        runCatching {
+        return runCatching {
             dbpService.getCaptchaSolution(transactionID, attemptId).run {
                 logcat { "PIR-CAPTCHA: RESULT -> $this" }
                 when (message) {

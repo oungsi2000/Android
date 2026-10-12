@@ -32,6 +32,7 @@ import com.duckduckgo.app.onboarding.ui.page.OnboardingPageFragment
 import com.duckduckgo.app.onboardingbranddesignupdate.OnboardingBrandDesignUpdateToggles
 import com.duckduckgo.appbuildconfig.api.AppBuildConfig
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.ActivityScope
 import com.duckduckgo.onboarding.api.LinearOnboardingOrchestrator
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -79,30 +80,29 @@ class OnboardingViewModel @Inject constructor(
         return pageLayoutManager.buildPage(position)
     }
 
+    @OnIo
     suspend fun onOnboardingDone(extendedOnboardingFlow: ExtendedOnboardingFlow = DEFAULT) {
-        withContext(dispatchers.io()) {
-            // The orchestrator owns the terminal AppStage write when it drives the run (BrandDesignUpdate
-            // page). The legacy WelcomePage path (brand design update off) does not touch the orchestrator,
-            // so it writes the terminal state here. The extended-flow CTA seeding below always runs (it is
-            // driven by the chosen demo query, not the orchestrator).
-            if (!onboardingBrandDesignUpdateToggles.brandDesignUpdate().isEnabled()) {
-                userStageStore.stageCompleted(AppStage.NEW)
+        // The orchestrator owns the terminal AppStage write when it drives the run (BrandDesignUpdate
+        // page). The legacy WelcomePage path (brand design update off) does not touch the orchestrator,
+        // so it writes the terminal state here. The extended-flow CTA seeding below always runs (it is
+        // driven by the chosen demo query, not the orchestrator).
+        if (!onboardingBrandDesignUpdateToggles.brandDesignUpdate().isEnabled()) {
+            userStageStore.stageCompleted(AppStage.NEW)
+        }
+
+        when (extendedOnboardingFlow) {
+            DEFAULT -> {
+                // no-op
             }
 
-            when (extendedOnboardingFlow) {
-                DEFAULT -> {
-                    // no-op
-                }
+            DUCK_AI_FOCUSED -> {
+                // Arm the in-browser Duck.ai demo (sets the flow + silences the standard DAX CTAs).
+                // Shared with the linear-onboarding duck_ai_demo step so both paths arm identically.
+                duckAiOnboardingDemo.arm()
+            }
 
-                DUCK_AI_FOCUSED -> {
-                    // Arm the in-browser Duck.ai demo (sets the flow + silences the standard DAX CTAs).
-                    // Shared with the linear-onboarding duck_ai_demo step so both paths arm identically.
-                    duckAiOnboardingDemo.arm()
-                }
-
-                DEFAULT_WITHOUT_INTRO_CTA -> {
-                    dismissedCtaDao.insert(DismissedCta(CtaId.DAX_INTRO))
-                }
+            DEFAULT_WITHOUT_INTRO_CTA -> {
+                dismissedCtaDao.insert(DismissedCta(CtaId.DAX_INTRO))
             }
         }
     }

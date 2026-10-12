@@ -22,9 +22,9 @@ import com.duckduckgo.autofill.impl.AutofillGlobalCapabilityChecker
 import com.duckduckgo.autofill.impl.email.incontext.EmailProtectionInContextSignupFeature
 import com.duckduckgo.autofill.impl.email.remoteconfig.EmailProtectionInContextExceptions
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import java.util.*
 import javax.inject.Inject
 
@@ -43,14 +43,15 @@ class RealEmailProtectionInContextAvailabilityRules @Inject constructor(
     private val recentInstallChecker: EmailProtectionInContextRecentInstallChecker,
 ) : EmailProtectionInContextAvailabilityRules {
 
-    override suspend fun permittedToShow(url: String): Boolean = withContext(dispatchers.io()) {
-        if (!isFeatureEnabled()) return@withContext false
-        if (!isEnglishLocale()) return@withContext false
-        if (!withinInstallTimeLimit()) return@withContext false
-        if (!isSecureAutofillAvailable()) return@withContext false
-        if (!canShowForCurrentPage(url)) return@withContext false
+    @OnIo
+    override suspend fun permittedToShow(url: String): Boolean {
+        if (!isFeatureEnabled()) return false
+        if (!isEnglishLocale()) return false
+        if (!withinInstallTimeLimit()) return false
+        if (!isSecureAutofillAvailable()) return false
+        if (!canShowForCurrentPage(url)) return false
 
-        return@withContext true
+        return true
     }
 
     private fun canShowForCurrentPage(url: String): Boolean {

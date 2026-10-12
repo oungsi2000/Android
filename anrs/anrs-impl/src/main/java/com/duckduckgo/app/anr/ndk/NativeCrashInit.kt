@@ -16,6 +16,7 @@
 
 package com.duckduckgo.app.anr.ndk
 
+import com.duckduckgo.common.utils.LogFailure
 import android.content.Context
 import android.util.Log
 import androidx.lifecycle.LifecycleOwner
@@ -30,7 +31,7 @@ import com.duckduckgo.app.statistics.pixels.Pixel
 import com.duckduckgo.appbuildconfig.api.AppBuildConfig
 import com.duckduckgo.appbuildconfig.api.isInternalBuild
 import com.duckduckgo.browser.api.WebViewVersionProvider
-import com.duckduckgo.common.utils.checkMainThread
+import com.duckduckgo.common.utils.CheckNotMainThread
 import com.duckduckgo.customtabs.api.CustomTabDetector
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.library.loader.LibraryLoader
@@ -123,9 +124,8 @@ class NativeCrashInit @Inject constructor(
         }
     }
 
+    @CheckNotMainThread
     override fun success() {
-        checkMainThread()
-
         runCatching {
             logcat(ERROR) { "ndk-crash: Library loaded in process $processName" }
             val logLevel = if (appBuildConfig.isDebug || appBuildConfig.isInternalBuild()) {
@@ -134,9 +134,7 @@ class NativeCrashInit @Inject constructor(
                 Log.ASSERT
             }
             jni_register_sighandler(logLevel, appBuildConfig.versionName, processName, isCustomTab, webViewPackage, webViewVersion)
-        }.onFailure {
-            logcat(ERROR) { "ndk-crash: Error calling jni_register_sighandler: ${it.asLog()}" }
-        }
+        }.onFailure @LogFailure("ndk-crash: Error calling jni_register_sighandler: ", priority = ERROR) {}
     }
 
     override fun failure(t: Throwable) {

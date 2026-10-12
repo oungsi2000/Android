@@ -21,6 +21,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import com.duckduckgo.browser.feature.toggles.AndroidBrowserConfigFeature
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.file.FileDeleter
 import com.duckduckgo.common.utils.sha256
 import kotlinx.coroutines.NonCancellable
@@ -89,31 +90,30 @@ class FileBasedFaviconPersister(
         }
     }
 
+    @OnIo
     override suspend fun copyToDirectory(
         file: File,
         directory: String,
         newSubfolder: String,
         newFilename: String,
     ) {
-        withContext(dispatcherProvider.io()) {
-            val persistedFile = fileForFavicon(directory, newSubfolder, newFilename)
-            if (androidBrowserConfigFeature.atomicFaviconWrites().isEnabled()) {
-                val tmp = File(persistedFile.parent, "${persistedFile.name}.tmp")
-                runCatching {
-                    file.copyTo(tmp, overwrite = true)
-                    if (!tmp.renameTo(persistedFile)) {
-                        tmp.delete()
-                        logcat(LogPriority.WARN) { "FaviconPersister [copyToDirectory][atomic]: failed to rename to ${persistedFile.name}" }
-                    }
-                }.onFailure {
+        val persistedFile = fileForFavicon(directory, newSubfolder, newFilename)
+        if (androidBrowserConfigFeature.atomicFaviconWrites().isEnabled()) {
+            val tmp = File(persistedFile.parent, "${persistedFile.name}.tmp")
+            runCatching {
+                file.copyTo(tmp, overwrite = true)
+                if (!tmp.renameTo(persistedFile)) {
                     tmp.delete()
+                    logcat(LogPriority.WARN) { "FaviconPersister [copyToDirectory][atomic]: failed to rename to ${persistedFile.name}" }
                 }
-            } else {
-                try {
-                    file.copyTo(persistedFile, overwrite = true)
-                } catch (e: FileAlreadyExistsException) {
-                    logcat { "FaviconPersister copyToDirectory [legacy]: failed to overwrite ${persistedFile.name}: ${e.message}" }
-                }
+            }.onFailure {
+                tmp.delete()
+            }
+        } else {
+            try {
+                file.copyTo(persistedFile, overwrite = true)
+            } catch (e: FileAlreadyExistsException) {
+                logcat { "FaviconPersister copyToDirectory [legacy]: failed to overwrite ${persistedFile.name}: ${e.message}" }
             }
         }
     }

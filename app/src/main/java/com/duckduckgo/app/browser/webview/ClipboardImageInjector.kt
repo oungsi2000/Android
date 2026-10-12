@@ -39,6 +39,7 @@ import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.appbuildconfig.api.AppBuildConfig
 import com.duckduckgo.browser.api.webviewcompat.WebViewCompatWrapper
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import kotlinx.coroutines.CoroutineScope
@@ -100,11 +101,10 @@ class ClipboardImageInjectorImpl @Inject constructor(
         }
     }
 
+    @OnIo
     private suspend fun isModernApproachSupported(): Boolean {
-        return withContext(dispatcherProvider.io()) {
-            webViewCapabilityChecker.isSupported(WebViewCapability.WebMessageListener) &&
-                webViewCapabilityChecker.isSupported(WebViewCapability.DocumentStartJavaScript)
-        }
+        return webViewCapabilityChecker.isSupported(WebViewCapability.WebMessageListener) &&
+            webViewCapabilityChecker.isSupported(WebViewCapability.DocumentStartJavaScript)
     }
 
     override fun injectLegacyPolyfill(webView: WebView) {
@@ -427,12 +427,11 @@ class ClipboardImageInjectorImpl @Inject constructor(
         }
     }
 
+    @OnIo
     private suspend fun getPolyfillScript(): String {
-        return withContext(dispatcherProvider.io()) {
-            context.resources.openRawResource(R.raw.clipboard_polyfill)
-                .bufferedReader()
-                .use { it.readText() }
-        }
+        return context.resources.openRawResource(R.raw.clipboard_polyfill)
+            .bufferedReader()
+            .use { it.readText() }
     }
 
     companion object {

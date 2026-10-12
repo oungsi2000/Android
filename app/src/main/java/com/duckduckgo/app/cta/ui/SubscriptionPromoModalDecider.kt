@@ -23,12 +23,12 @@ import com.duckduckgo.app.global.install.daysInstalled
 import com.duckduckgo.app.onboarding.ui.page.extendedonboarding.ExtendedOnboardingFeatureToggles
 import com.duckduckgo.app.settings.db.SettingsDataStore
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.subscriptions.api.SubscriptionStatus
 import com.duckduckgo.subscriptions.api.Subscriptions
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
@@ -60,8 +60,9 @@ class RealSubscriptionPromoModalDecider @Inject constructor(
     private val dispatchers: DispatcherProvider,
 ) : SubscriptionPromoModalDecider {
 
-    override suspend fun decide(): SubscriptionPromoModalDecision? = withContext(dispatchers.io()) {
-        when {
+    @OnIo
+    override suspend fun decide(): SubscriptionPromoModalDecision? {
+        return when {
             canShowSubscriptionCtaForSkippedOnboarding() -> SubscriptionPromoModalDecision(
                 flow = SubscriptionPromoFlow.SKIPPED_ONBOARDING,
                 isFreeTrialCopy = freeTrialCopyAvailable(),

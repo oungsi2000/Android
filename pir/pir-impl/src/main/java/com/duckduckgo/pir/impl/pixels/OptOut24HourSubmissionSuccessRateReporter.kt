@@ -18,11 +18,11 @@ package com.duckduckgo.pir.impl.pixels
 
 import com.duckduckgo.common.utils.CurrentTimeProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.pir.impl.store.PirRepository
 import com.duckduckgo.pir.impl.store.PirSchedulingRepository
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -41,45 +41,44 @@ class RealOptOut24HourSubmissionSuccessRateReporter @Inject constructor(
     private val pirSchedulingRepository: PirSchedulingRepository,
     private val dispatcherProvider: DispatcherProvider,
 ) : OptOut24HourSubmissionSuccessRateReporter {
+    @OnIo
     override suspend fun attemptFirePixel() {
-        withContext(dispatcherProvider.io()) {
-            logcat { "PIR-CUSTOM-STATS: Attempt to fire 24hour submission pixels" }
-            val lastSentMs = pirRepository.getCustomStatsPixelsLastSentMs()
-            val now = currentTimeProvider.currentTimeMillis()
+        logcat { "PIR-CUSTOM-STATS: Attempt to fire 24hour submission pixels" }
+        val lastSentMs = pirRepository.getCustomStatsPixelsLastSentMs()
+        val now = currentTimeProvider.currentTimeMillis()
 
-            if (!shouldFirePixel(lastSentMs, now)) return@withContext
-            logcat { "PIR-CUSTOM-STATS: Should fire pixel - 24hrs passed since last send" }
-            // previous endDate was (lastSentMs - 24h) so that should be our new startDate
-            val startDate = if (lastSentMs == 0L) 0L else lastSentMs - TimeUnit.HOURS.toMillis(24)
-            val endDate = now - TimeUnit.HOURS.toMillis(24)
-            val activeBrokers = pirRepository.getAllActiveBrokerObjects()
-            val hasUserProfiles = pirRepository.getAllUserProfileQueries().isNotEmpty()
-            val activeOptOutJobRecords = pirSchedulingRepository.getAllValidOptOutJobRecords()
+        if (!shouldFirePixel(lastSentMs, now)) return
+        logcat { "PIR-CUSTOM-STATS: Should fire pixel - 24hrs passed since last send" }
+        // previous endDate was (lastSentMs - 24h) so that should be our new startDate
+        val startDate = if (lastSentMs == 0L) 0L else lastSentMs - TimeUnit.HOURS.toMillis(24)
+        val endDate = now - TimeUnit.HOURS.toMillis(24)
+        val activeBrokers = pirRepository.getAllActiveBrokerObjects()
+        val hasUserProfiles = pirRepository.getAllUserProfileQueries().isNotEmpty()
+        val activeOptOutJobRecords = pirSchedulingRepository.getAllValidOptOutJobRecords()
 
-            if (activeBrokers.isNotEmpty() && activeOptOutJobRecords.isNotEmpty() && hasUserProfiles) {
-                activeBrokers.forEach { broker ->
-                    val activeJobRecordsForBroker = activeOptOutJobRecords.filter { it.brokerName == broker.name }
+        if (activeBrokers.isNotEmpty() && activeOptOutJobRecords.isNotEmpty() && hasUserProfiles) {
+            activeBrokers.forEach { broker ->
+                val activeJobRecordsForBroker = activeOptOutJobRecords.filter { it.brokerName == broker.name }
 
-                    if (activeJobRecordsForBroker.isEmpty()) return@forEach
+                if (activeJobRecordsForBroker.isEmpty()) return@forEach
 
-                    val successRate = optOutSubmitRateCalculator.calculateOptOutSubmitRate(
-                        activeJobRecordsForBroker,
-                        startDate,
-                        endDate,
+                val successRate = optOutSubmitRateCalculator.calculateOptOutSubmitRate(
+                    activeJobRecordsForBroker,
+                    startDate,
+                    endDate,
+                )
+
+                logcat { "PIR-CUSTOM-STATS: 24hr submission ${broker.name} : $successRate" }
+                if (successRate != null) {
+                    pirPixelSender.reportBrokerCustomStateOptOutSubmitRate(
+                        brokerUrl = broker.url,
+                        optOutSuccessRate = successRate,
                     )
-
-                    logcat { "PIR-CUSTOM-STATS: 24hr submission ${broker.name} : $successRate" }
-                    if (successRate != null) {
-                        pirPixelSender.reportBrokerCustomStateOptOutSubmitRate(
-                            brokerUrl = broker.url,
-                            optOutSuccessRate = successRate,
-                        )
-                    }
                 }
-
-                logcat { "PIR-CUSTOM-STATS: Updating last send date to $now" }
-                pirRepository.setCustomStatsPixelsLastSentMs(now)
             }
+
+            logcat { "PIR-CUSTOM-STATS: Updating last send date to $now" }
+            pirRepository.setCustomStatsPixelsLastSentMs(now)
         }
     }
 

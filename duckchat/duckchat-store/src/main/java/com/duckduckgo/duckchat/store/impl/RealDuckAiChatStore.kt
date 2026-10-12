@@ -17,10 +17,10 @@
 package com.duckduckgo.duckchat.store.impl
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.duckchat.store.impl.store.DuckAiBridgeChatEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import org.json.JSONObject
 import java.io.File
@@ -113,116 +113,120 @@ class RealDuckAiChatStore(
     private val fileMetaDao = storage.fileMeta
     private val filesDir: File get() = storage.filesDir
 
-    override suspend fun hasMigrated(): Boolean =
-        withContext(dispatchers.io()) {
-            migrationPrefs.isMigrationDone(DuckAiMigrationPrefs.CHATS_KEY)
-        }
+    @OnIo
+    override suspend fun hasMigrated(): Boolean {
+        return migrationPrefs.isMigrationDone(DuckAiMigrationPrefs.CHATS_KEY)
+    }
 
-    override suspend fun getChats(): List<DuckAiChat> =
-        withContext(dispatchers.io()) { chatsDao.getAll().mapNotNull { it.toDuckAiChat() } }
+    @OnIo
+    override suspend fun getChats(): List<DuckAiChat> {
+        return chatsDao.getAll().mapNotNull { it.toDuckAiChat() }
+    }
 
-    override suspend fun getChatById(chatId: String): DuckAiChat? =
-        withContext(dispatchers.io()) { chatsDao.getById(chatId)?.toDuckAiChat() }
+    @OnIo
+    override suspend fun getChatById(chatId: String): DuckAiChat? {
+        return chatsDao.getById(chatId)?.toDuckAiChat()
+    }
 
     override fun getChatsFlow(): Flow<List<DuckAiChat>> =
         chatsDao.getAllAsFlow().map { entities -> entities.mapNotNull { it.toDuckAiChat() } }
 
-    override suspend fun deleteChat(chatId: String): Boolean =
-        withContext(dispatchers.io()) {
-            logcat { "DuckAI: RealDuckAiChatStore.deleteChat($chatId)" }
-            val entity = chatsDao.getById(chatId) ?: return@withContext false
-            val fileRefs = runCatching {
-                val json = JSONObject(entity.data)
-                json.optJSONArray("fileRefs")?.let { arr -> (0 until arr.length()).map { arr.getString(it) } }
-                    ?: emptyList()
-            }.getOrDefault(emptyList())
+    @OnIo
+    override suspend fun deleteChat(chatId: String): Boolean {
+        logcat { "DuckAI: RealDuckAiChatStore.deleteChat($chatId)" }
+        val entity = chatsDao.getById(chatId) ?: return false
+        val fileRefs = runCatching {
+            val json = JSONObject(entity.data)
+            json.optJSONArray("fileRefs")?.let { arr -> (0 until arr.length()).map { arr.getString(it) } }
+                ?: emptyList()
+        }.getOrDefault(emptyList())
 
-            chatsDao.delete(chatId)
+        chatsDao.delete(chatId)
 
-            fileRefs.forEach { uuid ->
-                val file = File(filesDir, uuid)
-                if (file.canonicalPath.startsWith(filesDir.canonicalPath + File.separator)) {
-                    logcat { "DuckAI: RealDuckAiChatStore.deleteChat($chatId) -- deleting fileRef file=${file.name}" }
-                    file.delete()
-                    fileMetaDao.delete(uuid)
-                } else {
-                    logcat { "DuckAI: RealDuckAiChatStore.deleteChat($chatId) -- invalid uuid=$uuid" }
-                }
+        fileRefs.forEach { uuid ->
+            val file = File(filesDir, uuid)
+            if (file.canonicalPath.startsWith(filesDir.canonicalPath + File.separator)) {
+                logcat { "DuckAI: RealDuckAiChatStore.deleteChat($chatId) -- deleting fileRef file=${file.name}" }
+                file.delete()
+                fileMetaDao.delete(uuid)
+            } else {
+                logcat { "DuckAI: RealDuckAiChatStore.deleteChat($chatId) -- invalid uuid=$uuid" }
             }
-
-            true
         }
 
-    override suspend fun deleteAllChats() {
-        withContext(dispatchers.io()) {
-            logcat { "DuckAI: RealDuckAiChatStore.deleteAllChats()...deleting all chats" }
-            chatsDao.deleteAll()
-            fileMetaDao.getAll().forEach { meta ->
-                val file = File(filesDir, meta.uuid)
-                if (file.canonicalPath.startsWith(filesDir.canonicalPath + File.separator)) {
-                    logcat { "DuckAI: deleting chat file $file" }
-                    file.delete()
-                }
-            }
-            fileMetaDao.deleteAll()
-        }
+        return true
     }
 
-    override suspend fun renameChat(chatId: String, newTitle: String): Boolean =
-        withContext(dispatchers.io()) {
-            logcat { "DuckAI: RealDuckAiChatStore.renameChat($chatId)" }
-            val entity = chatsDao.getById(chatId) ?: return@withContext false
-            val updatedJson = runCatching {
-                JSONObject(entity.data).put("title", newTitle).toString()
-            }.getOrNull() ?: return@withContext false
-            chatsDao.upsert(entity.copy(data = updatedJson))
-            true
+    @OnIo
+    override suspend fun deleteAllChats() {
+        logcat { "DuckAI: RealDuckAiChatStore.deleteAllChats()...deleting all chats" }
+        chatsDao.deleteAll()
+        fileMetaDao.getAll().forEach { meta ->
+            val file = File(filesDir, meta.uuid)
+            if (file.canonicalPath.startsWith(filesDir.canonicalPath + File.separator)) {
+                logcat { "DuckAI: deleting chat file $file" }
+                file.delete()
+            }
         }
+        fileMetaDao.deleteAll()
+    }
+
+    @OnIo
+    override suspend fun renameChat(chatId: String, newTitle: String): Boolean {
+        logcat { "DuckAI: RealDuckAiChatStore.renameChat($chatId)" }
+        val entity = chatsDao.getById(chatId) ?: return false
+        val updatedJson = runCatching {
+            JSONObject(entity.data).put("title", newTitle).toString()
+        }.getOrNull() ?: return false
+        chatsDao.upsert(entity.copy(data = updatedJson))
+        return true
+    }
 
     override suspend fun pinChat(chatId: String) = setPinned(chatId, pinned = true)
 
     override suspend fun unpinChat(chatId: String) = setPinned(chatId, pinned = false)
 
+    @OnIo
     private suspend fun setPinned(chatId: String, pinned: Boolean) {
-        withContext(dispatchers.io()) {
-            logcat { "DuckAI: RealDuckAiChatStore.setPinned($chatId, $pinned)" }
-            val entity = chatsDao.getById(chatId) ?: return@withContext
-            val updatedJson = runCatching {
-                JSONObject(entity.data).put("pinned", pinned).toString()
-            }.getOrNull() ?: return@withContext
-            chatsDao.upsert(entity.copy(data = updatedJson))
-        }
+        logcat { "DuckAI: RealDuckAiChatStore.setPinned($chatId, $pinned)" }
+        val entity = chatsDao.getById(chatId) ?: return
+        val updatedJson = runCatching {
+            JSONObject(entity.data).put("pinned", pinned).toString()
+        }.getOrNull() ?: return
+        chatsDao.upsert(entity.copy(data = updatedJson))
     }
 
-    override suspend fun getChatContent(chatId: String): String? =
-        withContext(dispatchers.io()) { chatsDao.getById(chatId)?.data }
+    @OnIo
+    override suspend fun getChatContent(chatId: String): String? {
+        return chatsDao.getById(chatId)?.data
+    }
 
-    override suspend fun readFileRef(uuid: String): FileRefContent? =
-        withContext(dispatchers.io()) {
-            val file = File(filesDir, uuid)
-            // Same path-traversal guard as deleteChat — reject anything resolving outside the dir.
-            if (!file.canonicalPath.startsWith(filesDir.canonicalPath + File.separator)) {
-                logcat { "DuckAI: RealDuckAiChatStore.readFileRef -- invalid uuid=$uuid" }
-                return@withContext null
-            }
-            if (!file.exists()) return@withContext null
-            runCatching {
-                val json = JSONObject(file.readText())
-                val rawData = json.optString("data").takeIf { it.isNotEmpty() } ?: return@runCatching null
-                // Accept both plain base64 and `data:<mime>;base64,<payload>` data URLs.
-                val base64 = if (rawData.startsWith("data:")) {
-                    rawData.substringAfter(',', missingDelimiterValue = "")
-                } else {
-                    rawData
-                }
-                if (base64.isEmpty()) return@runCatching null
-                FileRefContent(
-                    fileName = json.optString("fileName").ifEmpty { null },
-                    mimeType = json.optString("mimeType").ifEmpty { null },
-                    bytes = Base64.getDecoder().decode(base64),
-                )
-            }.getOrNull()
+    @OnIo
+    override suspend fun readFileRef(uuid: String): FileRefContent? {
+        val file = File(filesDir, uuid)
+        // Same path-traversal guard as deleteChat — reject anything resolving outside the dir.
+        if (!file.canonicalPath.startsWith(filesDir.canonicalPath + File.separator)) {
+            logcat { "DuckAI: RealDuckAiChatStore.readFileRef -- invalid uuid=$uuid" }
+            return null
         }
+        if (!file.exists()) return null
+        return runCatching {
+            val json = JSONObject(file.readText())
+            val rawData = json.optString("data").takeIf { it.isNotEmpty() } ?: return@runCatching null
+            // Accept both plain base64 and `data:<mime>;base64,<payload>` data URLs.
+            val base64 = if (rawData.startsWith("data:")) {
+                rawData.substringAfter(',', missingDelimiterValue = "")
+            } else {
+                rawData
+            }
+            if (base64.isEmpty()) return@runCatching null
+            FileRefContent(
+                fileName = json.optString("fileName").ifEmpty { null },
+                mimeType = json.optString("mimeType").ifEmpty { null },
+                bytes = Base64.getDecoder().decode(base64),
+            )
+        }.getOrNull()
+    }
 
     private fun DuckAiBridgeChatEntity.toDuckAiChat(): DuckAiChat? = runCatching {
         val json = JSONObject(data)

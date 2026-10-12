@@ -19,6 +19,7 @@ package com.duckduckgo.subscriptions.impl.internal
 import android.net.Uri
 import androidx.core.net.toUri
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.subscriptions.api.Product
 import com.duckduckgo.subscriptions.impl.SubscriptionsConstants.FEATURE_PAGE_QUERY_PARAM_KEY
@@ -30,7 +31,6 @@ import com.duckduckgo.subscriptions.impl.SubscriptionsFeature
 import com.duckduckgo.subscriptions.impl.SubscriptionsFeature.PerformanceOptimizedPaywallsCohorts
 import com.duckduckgo.subscriptions.impl.SubscriptionsManager
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface PaywallUrlResolver {
@@ -46,8 +46,9 @@ class RealPaywallUrlResolver @Inject constructor(
     private val dispatcherProvider: DispatcherProvider,
 ) : PaywallUrlResolver {
 
-    override suspend fun resolve(url: String): String = withContext(dispatcherProvider.io()) {
-        runCatching {
+    @OnIo
+    override suspend fun resolve(url: String): String {
+        return runCatching {
             optimizedUrl(url)
         }.getOrNull() ?: url
     }

@@ -20,11 +20,11 @@ import android.content.Context
 import android.net.Uri
 import com.duckduckgo.browsermode.api.BrowserMode
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.cookies.api.CookieManagerProvider
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.Lazy
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -48,26 +48,26 @@ class RealTakeoutZipDownloader @Inject constructor(
     private val context: Context,
     private val cookieManagerProvider: CookieManagerProvider,
 ) : TakeoutZipDownloader {
+    @OnIo
     override suspend fun downloadZip(
         url: String,
         userAgent: String,
-    ): Uri =
-        withContext(dispatchers.io()) {
-            logcat { "Bookmark-import: Starting Google Takeout zip download from: $url" }
+    ): Uri {
+        logcat { "Bookmark-import: Starting Google Takeout zip download from: $url" }
 
-            val tempFile = createTempZipFile()
-            val request = constructRequestBuilder(url, userAgent).build()
+        val tempFile = createTempZipFile()
+        val request = constructRequestBuilder(url, userAgent).build()
 
-            okHttpClient.get().newCall(request).execute().use { response ->
-                if (response.isSuccessful) {
-                    downloadToFile(response, tempFile)
-                    Uri.fromFile(tempFile)
-                } else {
-                    tempFile.delete()
-                    throw IOException("Bookmark-import: Google Takeout zip download failed: HTTP ${response.code}: ${response.message}")
-                }
+        return okHttpClient.get().newCall(request).execute().use { response ->
+            if (response.isSuccessful) {
+                downloadToFile(response, tempFile)
+                Uri.fromFile(tempFile)
+            } else {
+                tempFile.delete()
+                throw IOException("Bookmark-import: Google Takeout zip download failed: HTTP ${response.code}: ${response.message}")
             }
         }
+    }
 
     private fun constructRequestBuilder(
         url: String,

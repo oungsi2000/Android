@@ -18,10 +18,10 @@ package com.duckduckgo.pir.impl.scripts
 
 import com.duckduckgo.appbuildconfig.api.AppBuildConfig
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.util.Locale
 import java.util.UUID
@@ -50,18 +50,17 @@ class RealPirCssScriptLoader @Inject constructor(
     override val callbackName: String by lazy { generateRandomString() }
     override val javascriptInterface: String by lazy { generateRandomString() }
 
+    @OnIo
     override suspend fun getScript(): String {
-        return withContext(dispatcherProvider.io()) {
-            if (contentScopeJS.isNullOrBlank()) {
-                contentScopeJS = loadJs("brokerProtection.js").run {
-                    this.replace(CONTENT_SCOPE_PLACEHOLDER, getContentScopeJson())
-                        .replace(USER_UNPROTECTED_DOMAINS_PLACEHOLDER, getUnprotectedDomainsJson())
-                        .replace(USER_PREFERENCES_PLACEHOLDER, getUserPreferencesJson())
-                        .replace(MESSAGING_PARAMETERS, "${getSecretKeyValuePair()},${getCallbackKeyValuePair()},${getInterfaceKeyValuePair()}")
-                }
+        if (contentScopeJS.isNullOrBlank()) {
+            contentScopeJS = loadJs("brokerProtection.js").run {
+                this.replace(CONTENT_SCOPE_PLACEHOLDER, getContentScopeJson())
+                    .replace(USER_UNPROTECTED_DOMAINS_PLACEHOLDER, getUnprotectedDomainsJson())
+                    .replace(USER_PREFERENCES_PLACEHOLDER, getUserPreferencesJson())
+                    .replace(MESSAGING_PARAMETERS, "${getSecretKeyValuePair()},${getCallbackKeyValuePair()},${getInterfaceKeyValuePair()}")
             }
-            contentScopeJS!!
         }
+        return contentScopeJS!!
     }
 
     private fun getInterfaceKeyValuePair(): String = "\"javascriptInterface\":\"$javascriptInterface\""

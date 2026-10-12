@@ -21,13 +21,13 @@ import com.duckduckgo.app.cta.model.CtaId
 import com.duckduckgo.app.onboarding.store.OnboardingStore
 import com.duckduckgo.app.widget.ui.WidgetCapabilities
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.promptscoordinator.api.ModalEvaluator
 import com.duckduckgo.promptscoordinator.api.ModalTrigger
 import com.squareup.anvil.annotations.ContributesMultibinding
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import javax.inject.Inject
 
@@ -52,7 +52,8 @@ class AddWidgetModalEvaluator @Inject constructor(
     override val evaluatorId: String = "add_widget_modal"
     override val trigger: ModalTrigger = ModalTrigger.NTP_RENDER
 
-    override suspend fun evaluate(): ModalEvaluator.EvaluationResult = withContext(dispatchers.io()) {
+    @OnIo
+    override suspend fun evaluate(): ModalEvaluator.EvaluationResult {
         if (!canShowWidgetCta()) {
             logcat {
                 "AddWidgetModalEvaluator: skipped, not eligible " +
@@ -60,16 +61,16 @@ class AddWidgetModalEvaluator @Inject constructor(
                     "dismissed=${dismissedCtaDao.exists(CtaId.ADD_WIDGET)}, " +
                     "linearPlanWidgetPromptShown=${onboardingStore.linearPlanWidgetPromptShown})"
             }
-            return@withContext ModalEvaluator.EvaluationResult.Skipped
+            return ModalEvaluator.EvaluationResult.Skipped
         }
         delay(MODAL_DISPLAY_DELAY)
         val presenter = presenterRegistry.current()
         if (presenter == null) {
             logcat { "AddWidgetModalEvaluator: skipped, no presenter registered" }
-            return@withContext ModalEvaluator.EvaluationResult.Skipped
+            return ModalEvaluator.EvaluationResult.Skipped
         }
         val shown = presenter.showAddWidgetPromo(widgetCapabilities.supportsAutomaticWidgetAdd)
-        if (shown) {
+        return if (shown) {
             ModalEvaluator.EvaluationResult.ModalShown
         } else {
             logcat { "AddWidgetModalEvaluator: skipped, presenter declined (not on New Tab Page)" }

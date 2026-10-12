@@ -17,10 +17,10 @@
 package com.duckduckgo.app.browser.defaultbrowsing
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import javax.inject.Inject
 import kotlin.random.Random
@@ -63,8 +63,9 @@ class RealDefaultBrowserChangedSurveySampler @Inject constructor(
         }
     }
 
-    override suspend fun isInSample(): Boolean = withContext(dispatchers.io()) {
-        random.nextInt(MAX_SAMPLE_RANGE) < samplingRate
+    @OnIo
+    override suspend fun isInSample(): Boolean {
+        return random.nextInt(MAX_SAMPLE_RANGE) < samplingRate
     }
 
     companion object {

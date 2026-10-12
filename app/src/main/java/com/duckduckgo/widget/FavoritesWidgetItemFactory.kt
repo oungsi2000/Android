@@ -33,11 +33,11 @@ import com.duckduckgo.app.browser.mode.FavoritesWidget
 import com.duckduckgo.app.global.DuckDuckGoApplication
 import com.duckduckgo.app.pixels.toPixelLaunchSourceValue
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.baseHost
 import com.duckduckgo.savedsites.api.SavedSitesRepository
 import com.duckduckgo.savedsites.api.models.SavedSite
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import java.io.File
 import javax.inject.Inject
@@ -104,15 +104,14 @@ class FavoritesWidgetItemFactory(
         }
     }
 
+    @OnIo
     private suspend fun fetchFavoritesWithBitmapUris(): List<WidgetFavorite> {
-        return withContext(dispatchers.io()) {
-            savedSitesRepository
-                .getFavoritesSync()
-                .take(maxItems)
-                .map { favorite ->
-                    favorite.toWidgetFavorite()
-                }
-        }
+        return savedSitesRepository
+            .getFavoritesSync()
+            .take(maxItems)
+            .map { favorite ->
+                favorite.toWidgetFavorite()
+            }
     }
 
     private suspend fun SavedSite.Favorite.toWidgetFavorite(): WidgetFavorite {

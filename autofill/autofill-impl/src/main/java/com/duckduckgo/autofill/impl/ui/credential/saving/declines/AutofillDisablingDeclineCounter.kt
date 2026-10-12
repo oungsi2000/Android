@@ -21,6 +21,7 @@ import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.autofill.store.AutofillPrefsStore
 import com.duckduckgo.common.utils.DefaultDispatcherProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
@@ -112,28 +113,27 @@ class AutofillDisablingDeclineCounter @Inject constructor(
         return determineIfDeclineCounterIsActive()
     }
 
+    @OnIo
     override suspend fun shouldPromptToDisableAutofill(): Boolean {
-        return withContext(dispatchers.io()) {
-            if (autofillPrefsStore.autofillStateSetByUser) {
-                autofillPrefsStore.monitorDeclineCounts = false
-                return@withContext false
-            }
-
-            if (!determineIfDeclineCounterIsActive()) return@withContext false
-
-            val promptedToDisablePreviously = promptedToDeclinePreviously()
-            val shouldOffer = declineCountHasReachedThreshold() && !promptedToDisablePreviously
-
-            logcat {
-                """
-                    User declined to save credentials ${autofillPrefsStore.autofillDeclineCount} times globally from all sessions.
-                    Prompted to disable before: $promptedToDisablePreviously.
-                    Should prompt to disable: $shouldOffer
-                """.trimIndent()
-            }
-
-            return@withContext shouldOffer
+        if (autofillPrefsStore.autofillStateSetByUser) {
+            autofillPrefsStore.monitorDeclineCounts = false
+            return false
         }
+
+        if (!determineIfDeclineCounterIsActive()) return false
+
+        val promptedToDisablePreviously = promptedToDeclinePreviously()
+        val shouldOffer = declineCountHasReachedThreshold() && !promptedToDisablePreviously
+
+        logcat {
+            """
+                User declined to save credentials ${autofillPrefsStore.autofillDeclineCount} times globally from all sessions.
+                Prompted to disable before: $promptedToDisablePreviously.
+                Should prompt to disable: $shouldOffer
+            """.trimIndent()
+        }
+
+        return shouldOffer
     }
 
     private fun declineCountHasReachedThreshold() = autofillPrefsStore.autofillDeclineCount == GLOBAL_DECLINE_COUNT_THRESHOLD

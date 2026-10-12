@@ -19,6 +19,7 @@ package com.duckduckgo.pir.impl.email
 import android.content.Context
 import android.webkit.WebView
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.plugins.PluginPoint
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.pir.impl.PirConstants.DEFAULT_PROFILE_QUERIES
@@ -39,7 +40,6 @@ import com.duckduckgo.pir.impl.scripts.PirCssScriptLoader
 import com.duckduckgo.pir.impl.store.PirRepository
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import javax.inject.Inject
 
@@ -88,14 +88,15 @@ class RealPirEmailConfirmation @Inject constructor(
     private val runners: MutableList<PirActionsRunner> = mutableListOf()
     private var maxWebViewCount = 1
 
+    @OnIo
     override suspend fun executeForEmailConfirmationJobs(
         jobRecords: List<EmailConfirmationJobRecord>,
         context: Context,
         runType: RunType,
-    ): Result<Unit> = withContext(dispatcherProvider.io()) {
+    ): Result<Unit> {
         if (jobRecords.isEmpty()) {
             logcat { "PIR-EMAIL-CONFIRMATION: Nothing to scan here." }
-            return@withContext Result.success(Unit)
+            return Result.success(Unit)
         }
         cleanPreviousRun()
 
@@ -104,7 +105,7 @@ class RealPirEmailConfirmation @Inject constructor(
 
         if (processedJobRecords.isEmpty()) {
             logcat { "PIR-EMAIL-CONFIRMATION: No job records." }
-            return@withContext Result.success(Unit)
+            return Result.success(Unit)
         }
 
         val script = pirCssScriptLoader.getScript()
@@ -119,7 +120,7 @@ class RealPirEmailConfirmation @Inject constructor(
         pirWorkDistributor.executeAll(runners = runners, work = processedJobRecords)
 
         webViewDataCleaner.cleanWebViewData()
-        return@withContext Result.success(Unit)
+        return Result.success(Unit)
     }
 
     private suspend fun processJobRecords(jobRecords: List<EmailConfirmationJobRecord>): List<Pair<ProfileQuery, BrokerStep>> {
@@ -185,10 +186,11 @@ class RealPirEmailConfirmation @Inject constructor(
         }
     }
 
+    @OnIo
     override suspend fun debugExecute(
         jobRecord: EmailConfirmationJobRecord,
         webView: WebView,
-    ): Result<Unit> = withContext(dispatcherProvider.io()) {
+    ): Result<Unit> {
         onJobStarted()
         cleanPreviousRun()
 
@@ -199,21 +201,21 @@ class RealPirEmailConfirmation @Inject constructor(
         if (broker == null) {
             logcat { "PIR-EMAIL-CONFIRMATION: Broker ${jobRecord.brokerName} not found." }
             onJobCompleted()
-            return@withContext Result.failure(IllegalStateException("Broker not found"))
+            return Result.failure(IllegalStateException("Broker not found"))
         }
 
         val json = repository.getBrokerOptOutSteps(jobRecord.brokerName)
         if (json.isNullOrEmpty()) {
             logcat { "PIR-EMAIL-CONFIRMATION: No opt-out steps for ${jobRecord.brokerName}." }
             onJobCompleted()
-            return@withContext Result.failure(IllegalStateException("No opt-out steps found"))
+            return Result.failure(IllegalStateException("No opt-out steps found"))
         }
 
         val brokerStep = brokerStepsParser.parseEmailConfirmationStep(broker, json, jobRecord)
         if (brokerStep == null) {
             logcat { "PIR-EMAIL-CONFIRMATION: Failed to parse email confirmation step." }
             onJobCompleted()
-            return@withContext Result.failure(IllegalStateException("Failed to parse email confirmation step"))
+            return Result.failure(IllegalStateException("Failed to parse email confirmation step"))
         }
 
         val profileQuery = repository.getUserProfileQuery(jobRecord.userProfileId)
@@ -221,7 +223,7 @@ class RealPirEmailConfirmation @Inject constructor(
         if (profileQuery == null) {
             logcat { "PIR-EMAIL-CONFIRMATION: Profile query not found for ${jobRecord.userProfileId}." }
             onJobCompleted()
-            return@withContext Result.failure(IllegalStateException("Profile query not found"))
+            return Result.failure(IllegalStateException("Profile query not found"))
         }
 
         runners.add(
@@ -239,7 +241,7 @@ class RealPirEmailConfirmation @Inject constructor(
 
         onJobCompleted()
         webViewDataCleaner.cleanWebViewData()
-        return@withContext Result.success(Unit)
+        return Result.success(Unit)
     }
 
     override fun stop() {

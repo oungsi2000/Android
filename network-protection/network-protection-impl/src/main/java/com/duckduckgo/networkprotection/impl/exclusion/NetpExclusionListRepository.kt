@@ -20,6 +20,7 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.extensions.safeGetInstalledApplications
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.networkprotection.impl.autoexclude.AutoExcludeAppsRepository
@@ -29,7 +30,6 @@ import com.duckduckgo.networkprotection.store.db.NetPManuallyExcludedApp
 import com.duckduckgo.networkprotection.store.db.VpnIncompatibleApp
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface NetPExclusionListRepository {
@@ -46,21 +46,20 @@ class RealNetPExclusionListRepository @Inject constructor(
     private val packageManager: PackageManager,
     private val context: Context,
 ) : NetPExclusionListRepository {
+    @OnIo
     override suspend fun getExcludedAppPackages(): List<String> {
-        return withContext(dispatcherProvider.io()) {
-            val manuallyExcludedApps = manualExclusionListRepository.getManualAppExclusionList()
-            val autoExcludeApps = if (isAutoExcludeEnabled()) {
-                autoExcludeAppsRepository.getAllIncompatibleApps()
-            } else {
-                emptyList()
-            }
-
-            packageManager.safeGetInstalledApplications(context).asSequence()
-                .filter { isExcludedFromVpn(it, manuallyExcludedApps, autoExcludeApps) }
-                .sortedBy { it.name }
-                .map { it.packageName }
-                .toList()
+        val manuallyExcludedApps = manualExclusionListRepository.getManualAppExclusionList()
+        val autoExcludeApps = if (isAutoExcludeEnabled()) {
+            autoExcludeAppsRepository.getAllIncompatibleApps()
+        } else {
+            emptyList()
         }
+
+        return packageManager.safeGetInstalledApplications(context).asSequence()
+            .filter { isExcludedFromVpn(it, manuallyExcludedApps, autoExcludeApps) }
+            .sortedBy { it.name }
+            .map { it.packageName }
+            .toList()
     }
 
     private fun isAutoExcludeEnabled(): Boolean {

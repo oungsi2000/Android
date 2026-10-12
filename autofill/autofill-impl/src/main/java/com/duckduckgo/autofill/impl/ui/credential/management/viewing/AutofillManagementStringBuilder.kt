@@ -20,10 +20,10 @@ import android.content.Context
 import android.content.res.Resources
 import com.duckduckgo.autofill.impl.R
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.FragmentScope
 import com.duckduckgo.sync.api.DeviceSyncState
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface AutofillManagementStringBuilder {
@@ -60,20 +60,19 @@ class AutofillManagementStringBuilderImpl @Inject constructor(
         return "$firstMessage $secondMessage"
     }
 
+    @OnIo
     private suspend fun Resources.deleteAllPasswordsWarning(numberToDelete: Int): String {
-        return withContext(dispatchers.io()) {
-            return@withContext if (deviceSyncState.isUserSignedInOnDevice()) {
-                if (numberToDelete == 1) {
-                    getString(R.string.credentialManagementDeleteAllPasswordsFirstInstructionSyncedSingular)
-                } else {
-                    getQuantityString(R.plurals.credentialManagementDeleteAllPasswordsFirstInstructionSyncedPlural, numberToDelete)
-                }
+        return if (deviceSyncState.isUserSignedInOnDevice()) {
+            if (numberToDelete == 1) {
+                getString(R.string.credentialManagementDeleteAllPasswordsFirstInstructionSyncedSingular)
             } else {
-                if (numberToDelete == 1) {
-                    getString(R.string.credentialManagementDeleteAllPasswordsDialogFirstInstructionNotSyncedSingular)
-                } else {
-                    getQuantityString(R.plurals.credentialManagementDeleteAllPasswordsDialogFirstInstructionNotSyncedPlural, numberToDelete)
-                }
+                getQuantityString(R.plurals.credentialManagementDeleteAllPasswordsFirstInstructionSyncedPlural, numberToDelete)
+            }
+        } else {
+            if (numberToDelete == 1) {
+                getString(R.string.credentialManagementDeleteAllPasswordsDialogFirstInstructionNotSyncedSingular)
+            } else {
+                getQuantityString(R.plurals.credentialManagementDeleteAllPasswordsDialogFirstInstructionNotSyncedPlural, numberToDelete)
             }
         }
     }

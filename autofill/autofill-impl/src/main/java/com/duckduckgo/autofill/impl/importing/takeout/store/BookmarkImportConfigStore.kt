@@ -18,11 +18,11 @@ package com.duckduckgo.autofill.impl.importing.takeout.store
 
 import com.duckduckgo.autofill.api.AutofillFeature
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
-import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import javax.inject.Inject
 
@@ -47,22 +47,22 @@ class BookmarkImportConfigStoreImpl @Inject constructor(
         moshi.adapter(ImportConfigJson::class.java)
     }
 
-    override suspend fun getConfig(): BookmarkImportSettings =
-        withContext(dispatchers.io()) {
-            val config =
-                autofillFeature.canImportBookmarksFromGoogleTakeout().getSettings()?.let {
-                    runCatching {
-                        jsonAdapter.fromJson(it)
-                    }.getOrNull()
-                }
+    @OnIo
+    override suspend fun getConfig(): BookmarkImportSettings {
+        val config =
+            autofillFeature.canImportBookmarksFromGoogleTakeout().getSettings()?.let {
+                runCatching {
+                    jsonAdapter.fromJson(it)
+                }.getOrNull()
+            }
 
-            BookmarkImportSettings(
-                canImportFromGoogleTakeout = autofillFeature.canImportBookmarksFromGoogleTakeout().isEnabled(),
-                launchUrlGoogleTakeout = config?.launchUrl ?: LAUNCH_URL_DEFAULT,
-                canInjectJavascript = config?.canInjectJavascript ?: CAN_INJECT_JAVASCRIPT_DEFAULT,
-                javascriptConfigGoogleTakeout = config?.javascriptConfig?.toString() ?: JAVASCRIPT_CONFIG_DEFAULT,
-            )
-        }
+        return BookmarkImportSettings(
+            canImportFromGoogleTakeout = autofillFeature.canImportBookmarksFromGoogleTakeout().isEnabled(),
+            launchUrlGoogleTakeout = config?.launchUrl ?: LAUNCH_URL_DEFAULT,
+            canInjectJavascript = config?.canInjectJavascript ?: CAN_INJECT_JAVASCRIPT_DEFAULT,
+            javascriptConfigGoogleTakeout = config?.javascriptConfig?.toString() ?: JAVASCRIPT_CONFIG_DEFAULT,
+        )
+    }
 
     companion object {
         internal const val JAVASCRIPT_CONFIG_DEFAULT = "\"{}\""

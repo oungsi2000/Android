@@ -42,6 +42,7 @@ import com.duckduckgo.browser.api.autocomplete.AutoCompleteSettings
 import com.duckduckgo.browser.ui.autocomplete.AutocompleteHistoryDeleteFeature
 import com.duckduckgo.browsermode.api.BrowserMode
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.SingleLiveEvent
 import com.duckduckgo.di.scopes.ActivityScope
 import com.duckduckgo.duckchat.api.DuckAiFeatureState
@@ -383,8 +384,10 @@ class SystemSearchViewModel @Inject constructor(
         }
     }
 
-    suspend fun isAutocompleteHistoryDeleteButtonEnabled(): Boolean =
-        withContext(dispatchers.io()) { autocompleteHistoryDeleteFeature.self().isEnabled() }
+    @OnIo
+    suspend fun isAutocompleteHistoryDeleteButtonEnabled(): Boolean {
+        return autocompleteHistoryDeleteFeature.self().isEnabled()
+    }
 
     fun onUserRequestedToDeleteAutocompleteItem(suggestion: AutoCompleteSuggestion) {
         when (suggestion) {

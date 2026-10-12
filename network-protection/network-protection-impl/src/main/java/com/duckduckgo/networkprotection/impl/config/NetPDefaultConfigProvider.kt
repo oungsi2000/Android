@@ -17,6 +17,7 @@
 package com.duckduckgo.networkprotection.impl.config
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.VpnScope
 import com.duckduckgo.networkprotection.impl.VpnRemoteFeatures
 import com.duckduckgo.networkprotection.impl.configuration.VPNExcludedDomainsFallback
@@ -25,7 +26,6 @@ import com.duckduckgo.networkprotection.impl.exclusion.systemapps.SystemAppsExcl
 import com.duckduckgo.networkprotection.impl.settings.NetPSettingsLocalConfig
 import com.duckduckgo.networkprotection.impl.settings.NetpVpnSettingsDataStore
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import okhttp3.Dns
 import java.net.Inet4Address
@@ -68,10 +68,11 @@ class RealNetPDefaultConfigProvider @Inject constructor(
         }.toSet()
     }
 
-    override suspend fun routes(): Map<String, Int> = withContext(dispatcherProvider.io()) {
+    @OnIo
+    override suspend fun routes(): Map<String, Int> {
         val isLocalDnsEnabled = vpnRemoteFeatures.localVpnControllerDns().isEnabled()
 
-        return@withContext if (netPSettingsLocalConfig.vpnExcludeLocalNetworkRoutes().isEnabled()) {
+        return if (netPSettingsLocalConfig.vpnExcludeLocalNetworkRoutes().isEnabled()) {
             val routes = if (isLocalDnsEnabled) {
                 // get the all excluded IPs from excluded domains
                 val excludedDomainIps = excludedDomainsFallback.getFallback().keys.map {

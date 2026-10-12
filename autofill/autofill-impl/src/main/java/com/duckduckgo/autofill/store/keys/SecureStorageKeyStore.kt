@@ -41,6 +41,7 @@ import com.duckduckgo.autofill.impl.pixel.AutofillPixelNames.AUTOFILL_STORE_KEY_
 import com.duckduckgo.autofill.impl.securestorage.SecureStorageException
 import com.duckduckgo.autofill.impl.service.AutofillServiceFeature
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.sanitizeStackTrace
 import com.duckduckgo.data.store.api.SharedPreferencesProvider
 import kotlinx.coroutines.CoroutineScope
@@ -108,24 +109,23 @@ class RealSecureStorageKeyStore(
         val multiProcess: Boolean,
     )
 
+    @OnIo
     private suspend fun harmonyFlags(): HarmonyFlags {
-        return withContext(dispatcherProvider.io()) {
-            val autofillServiceFlag = autofillServiceFeature.self().isEnabled()
-            val useHarmonyFlag = autofillFeature.useHarmony().isEnabled()
+        val autofillServiceFlag = autofillServiceFeature.self().isEnabled()
+        val useHarmonyFlag = autofillFeature.useHarmony().isEnabled()
 
-            // Latch: once multiProcess is true, it stays true for this session to prevent
-            // mid-execution flag changes from causing us to miss keys that exist only in Harmony.
-            if (initialMultiProcessValue == null) {
-                initialMultiProcessValue = autofillServiceFlag
-            }
-            val effectiveMultiProcess = initialMultiProcessValue == true || autofillServiceFlag
-
-            HarmonyFlags(
-                useHarmony = useHarmonyFlag || effectiveMultiProcess,
-                readFromHarmony = (useHarmonyFlag && autofillFeature.readFromHarmony().isEnabled()) || effectiveMultiProcess,
-                multiProcess = effectiveMultiProcess,
-            )
+        // Latch: once multiProcess is true, it stays true for this session to prevent
+        // mid-execution flag changes from causing us to miss keys that exist only in Harmony.
+        if (initialMultiProcessValue == null) {
+            initialMultiProcessValue = autofillServiceFlag
         }
+        val effectiveMultiProcess = initialMultiProcessValue == true || autofillServiceFlag
+
+        return HarmonyFlags(
+            useHarmony = useHarmonyFlag || effectiveMultiProcess,
+            readFromHarmony = (useHarmonyFlag && autofillFeature.readFromHarmony().isEnabled()) || effectiveMultiProcess,
+            multiProcess = effectiveMultiProcess,
+        )
     }
 
     private val encryptedPreferencesDeferred: Deferred<SharedPreferences?> by lazy {
@@ -536,9 +536,10 @@ class RealSecureStorageKeyStore(
         }
     }
 
-    override suspend fun canUseEncryption(): Boolean = withContext(dispatcherProvider.io()) {
+    @OnIo
+    override suspend fun canUseEncryption(): Boolean {
         val harmonyFlags = harmonyFlags()
-        when {
+        return when {
             harmonyFlags.multiProcess -> getEncryptedPreferences() != null && getHarmonyEncryptedPreferences() != null
             harmonyFlags.useHarmony -> getEncryptedPreferences() != null && getHarmonyEncryptedPreferences() != null
             else -> getEncryptedPreferences() != null

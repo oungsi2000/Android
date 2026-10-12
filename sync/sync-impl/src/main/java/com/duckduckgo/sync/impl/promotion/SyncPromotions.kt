@@ -17,6 +17,7 @@
 package com.duckduckgo.sync.impl.promotion
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.sync.api.DeviceSyncState
 import com.duckduckgo.sync.impl.promotion.SyncPromotionDataStore.PromotionType
@@ -84,20 +85,18 @@ class SyncPromotionsImpl @Inject constructor(
         }
     }
 
+    @OnIo
     override suspend fun recordBookmarksPromotionDismissed() {
-        withContext(dispatchers.io()) {
-            dataStore.recordPromoDismissed(PromotionType.BookmarksScreen)
-        }
+        dataStore.recordPromoDismissed(PromotionType.BookmarksScreen)
     }
 
     override suspend fun canShowBookmarkAddedDialogPromotion(): Boolean {
         return bookmarkAddedPromoRules.canShowPromo()
     }
 
+    @OnIo
     override suspend fun recordBookmarkAddedDialogPromotionDismissed() {
-        withContext(dispatchers.io()) {
-            dataStore.recordPromoDismissed(PromotionType.BookmarkAddedDialog)
-        }
+        dataStore.recordPromoDismissed(PromotionType.BookmarkAddedDialog)
     }
 
     override suspend fun canShowPasswordsPromotion(savedPasswords: Int): Boolean {
@@ -113,10 +112,9 @@ class SyncPromotionsImpl @Inject constructor(
         }
     }
 
+    @OnIo
     override suspend fun recordPasswordsPromotionDismissed() {
-        withContext(dispatchers.io()) {
-            dataStore.recordPromoDismissed(PromotionType.PasswordsScreen)
-        }
+        dataStore.recordPromoDismissed(PromotionType.PasswordsScreen)
     }
 
     private fun isSyncFeatureEnabled() = syncState.isFeatureEnabled()

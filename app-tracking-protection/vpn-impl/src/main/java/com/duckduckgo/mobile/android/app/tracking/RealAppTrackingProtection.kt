@@ -18,6 +18,7 @@ package com.duckduckgo.mobile.android.app.tracking
 
 import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.mobile.android.vpn.AppTpVpnFeature
 import com.duckduckgo.mobile.android.vpn.VpnFeaturesRegistry
@@ -27,7 +28,6 @@ import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @ContributesBinding(AppScope::class)
@@ -39,8 +39,9 @@ class RealAppTrackingProtection @Inject constructor(
     private val dispatcherProvider: DispatcherProvider,
     private val trackingProtectionAppsRepository: TrackingProtectionAppsRepository,
 ) : AppTrackingProtection {
-    override suspend fun isOnboarded(): Boolean = withContext(dispatcherProvider.io()) {
-        return@withContext vpnStore.didShowOnboarding()
+    @OnIo
+    override suspend fun isOnboarded(): Boolean {
+        return vpnStore.didShowOnboarding()
     }
 
     override suspend fun isEnabled(): Boolean {
@@ -63,7 +64,8 @@ class RealAppTrackingProtection @Inject constructor(
         }
     }
 
-    override suspend fun getExcludedApps(): List<String> = withContext(dispatcherProvider.io()) {
-        trackingProtectionAppsRepository.getExclusionAppsList()
+    @OnIo
+    override suspend fun getExcludedApps(): List<String> {
+        return trackingProtectionAppsRepository.getExclusionAppsList()
     }
 }

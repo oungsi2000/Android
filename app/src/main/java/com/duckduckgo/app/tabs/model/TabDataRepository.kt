@@ -37,6 +37,7 @@ import com.duckduckgo.app.tabs.store.TabSwitcherDataStore
 import com.duckduckgo.common.utils.ConflatedJob
 import com.duckduckgo.common.utils.CurrentTimeProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.duckchat.api.nativeinput.NativeInputStatePublisher
 import com.duckduckgo.duckchat.impl.store.DuckChatContextualDataStore
 import io.reactivex.Scheduler
@@ -108,10 +109,11 @@ class TabDataRepository(
 
     private var tabInsertionFixesFlag: Boolean? = null
 
+    @OnIo
     override suspend fun add(
         url: String?,
         skipHome: Boolean,
-    ): String = withContext(dispatchers.io()) {
+    ): String {
         val tabId = generateTabId()
         val flag = getAndCacheTabInsertionFixesFlag()
         val siteData = if (flag) {
@@ -121,14 +123,15 @@ class TabDataRepository(
         }
         add(tabId, siteData, skipHome = skipHome, isDefaultTab = false, updateIfBlankParent = flag)
 
-        return@withContext tabId
+        return tabId
     }
 
+    @OnIo
     override suspend fun addFromSourceTab(
         url: String?,
         skipHome: Boolean,
         sourceTabId: String,
-    ): String = withContext(dispatchers.io()) {
+    ): String {
         val tabId = generateTabId()
         val flag = getAndCacheTabInsertionFixesFlag()
         val siteData = if (flag) {
@@ -145,10 +148,11 @@ class TabDataRepository(
             updateIfBlankParent = flag,
         )
 
-        return@withContext tabId
+        return tabId
     }
 
-    override suspend fun addDefaultTab(): String = withContext(dispatchers.io()) {
+    @OnIo
+    override suspend fun addDefaultTab(): String {
         val tabId = generateTabId()
         val flag = getAndCacheTabInsertionFixesFlag()
         val siteData = if (flag) {
@@ -164,7 +168,7 @@ class TabDataRepository(
             updateIfBlankParent = flag,
         )
 
-        return@withContext tabId
+        return tabId
     }
 
     private suspend fun getAndCacheTabInsertionFixesFlag(): Boolean {
@@ -447,8 +451,9 @@ class TabDataRepository(
         purgeDeletableTabsJob.join()
     }
 
-    override suspend fun getDeletableTabIds(): List<String> = withContext(dispatchers.io()) {
-        return@withContext tabsDao.getDeletableTabIds()
+    @OnIo
+    override suspend fun getDeletableTabIds(): List<String> {
+        return tabsDao.getDeletableTabIds()
     }
 
     override suspend fun deleteTabAndSelectSource(tabId: String) {
@@ -489,11 +494,15 @@ class TabDataRepository(
         nativeInputStatePublisher.clearAll()
     }
 
-    override suspend fun getSelectedTab(): TabEntity? =
-        withContext(dispatchers.io()) { tabsDao.selectedTab() }
+    @OnIo
+    override suspend fun getSelectedTab(): TabEntity? {
+        return tabsDao.selectedTab()
+    }
 
-    override suspend fun getLastAccessedTab(): TabEntity? =
-        withContext(dispatchers.io()) { tabsDao.lastAccessedTab() }
+    @OnIo
+    override suspend fun getLastAccessedTab(): TabEntity? {
+        return tabsDao.lastAccessedTab()
+    }
 
     override val flowLastAccessedTab: Flow<TabEntity?> = tabsDao.flowLastAccessedTab()
         .distinctUntilChanged()
@@ -505,8 +514,9 @@ class TabDataRepository(
         }
     }
 
+    @OnIo
     override suspend fun getTab(tabId: String): TabEntity? {
-        return withContext(dispatchers.io()) { tabsDao.tab(tabId) }
+        return tabsDao.tab(tabId)
     }
 
     override fun updateTabFavicon(

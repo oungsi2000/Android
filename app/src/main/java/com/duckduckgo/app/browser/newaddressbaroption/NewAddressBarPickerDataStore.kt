@@ -23,11 +23,11 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import com.duckduckgo.app.di.NewAddressBarPicker
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface NewAddressBarPickerDataStore {
@@ -50,22 +50,23 @@ class SharedPreferencesNewAddressBarPickerDataStore @Inject constructor(
         val DISPLAY_COUNT_KEY = intPreferencesKey(name = "NEW_ADDRESS_BAR_PICKER_DISPLAY_COUNT")
     }
 
+    @OnIo
     override suspend fun setAsShown() {
-        withContext(dispatchers.io()) {
-            dataStore.edit { prefs ->
-                prefs[Keys.WAS_SHOWN_KEY] = true
-            }
+        dataStore.edit { prefs ->
+            prefs[Keys.WAS_SHOWN_KEY] = true
         }
     }
 
-    override suspend fun wasShown(): Boolean = withContext(dispatchers.io()) {
-        dataStore.data.firstOrNull()?.let { it[Keys.WAS_SHOWN_KEY] } ?: false
+    @OnIo
+    override suspend fun wasShown(): Boolean {
+        return dataStore.data.firstOrNull()?.let { it[Keys.WAS_SHOWN_KEY] } ?: false
     }
 
-    override suspend fun incrementDisplayCount(): Int = withContext(dispatchers.io()) {
+    @OnIo
+    override suspend fun incrementDisplayCount(): Int {
         val updated = dataStore.edit { prefs ->
             prefs[Keys.DISPLAY_COUNT_KEY] = (prefs[Keys.DISPLAY_COUNT_KEY] ?: 0) + 1
         }
-        updated[Keys.DISPLAY_COUNT_KEY] ?: 0
+        return updated[Keys.DISPLAY_COUNT_KEY] ?: 0
     }
 }

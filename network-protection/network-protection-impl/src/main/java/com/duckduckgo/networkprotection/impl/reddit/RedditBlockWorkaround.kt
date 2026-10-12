@@ -16,6 +16,7 @@
 
 package com.duckduckgo.networkprotection.impl.reddit
 
+import com.duckduckgo.common.utils.LogFailure
 import android.webkit.CookieManager
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
@@ -86,9 +87,7 @@ class RedditBlockWorkaround @Inject constructor(
             withContext(dispatcherProvider.io()) {
                 cookieManager.resolvedProfiles().forEach(action)
             }
-        }.onFailure {
-            logcat { "Reddit workaround error: ${it.asLog()}" }
-        }
+        }.onFailure @LogFailure("Reddit workaround error: ") {}
     }
 
     private fun CookieJar.expireDummyIfPresent() {

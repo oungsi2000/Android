@@ -19,6 +19,7 @@ package com.duckduckgo.pir.impl.checker
 import android.content.Context
 import android.content.Intent
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.pir.impl.PirRemoteFeatures
 import com.duckduckgo.pir.impl.notifications.PirNotificationManager
@@ -38,7 +39,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
@@ -79,25 +79,24 @@ class RealPirWorkHandler @Inject constructor(
     private val pirScanWideEvent: PirScanWideEvent,
 ) : PirWorkHandler {
 
+    @OnIo
     override suspend fun canRunPir(): Flow<PirEligibility> {
-        return withContext(dispatcherProvider.io()) {
-            if (pirRemoteFeatures.pirBeta().isEnabled()) {
-                // User could have a valid subscription but is not entitled to PIR,
-                // so we have to check both
-                combine(
-                    subscriptions.getSubscriptionStatusFlow()
-                        .distinctUntilChanged(),
-                    subscriptions.getEntitlementStatus()
-                        .map { entitledProducts ->
-                            entitledProducts.contains(PIR)
-                        }
-                        .distinctUntilChanged(),
-                ) { subscriptionStatus, hasValidEntitlement ->
-                    resolveEligibility(subscriptionStatus, hasValidEntitlement)
-                }
-            } else {
-                flowOf(PirEligibility.Disabled(DisabledReason.FEATURE_DISABLED))
+        return if (pirRemoteFeatures.pirBeta().isEnabled()) {
+            // User could have a valid subscription but is not entitled to PIR,
+            // so we have to check both
+            combine(
+                subscriptions.getSubscriptionStatusFlow()
+                    .distinctUntilChanged(),
+                subscriptions.getEntitlementStatus()
+                    .map { entitledProducts ->
+                        entitledProducts.contains(PIR)
+                    }
+                    .distinctUntilChanged(),
+            ) { subscriptionStatus, hasValidEntitlement ->
+                resolveEligibility(subscriptionStatus, hasValidEntitlement)
             }
+        } else {
+            flowOf(PirEligibility.Disabled(DisabledReason.FEATURE_DISABLED))
         }
     }
 

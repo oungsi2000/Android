@@ -28,11 +28,11 @@ import com.duckduckgo.anvil.annotations.ContributesWorker
 import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesMultibinding
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.VERBOSE
 import logcat.logcat
 import java.util.concurrent.TimeUnit
@@ -51,14 +51,13 @@ class RemoteMessagingConfigDownloadWorker(
     @Inject
     lateinit var dispatcherProvider: DispatcherProvider
 
+    @OnIo
     override suspend fun doWork(): Result {
-        return withContext(dispatcherProvider.io()) {
-            val result = downloader.download()
-            return@withContext if (result) {
-                Result.success()
-            } else {
-                Result.retry()
-            }
+        val result = downloader.download()
+        return if (result) {
+            Result.success()
+        } else {
+            Result.retry()
         }
     }
 }

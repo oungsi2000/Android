@@ -20,6 +20,7 @@ import com.duckduckgo.app.privacy.db.UserAllowListRepository
 import com.duckduckgo.appbuildconfig.api.AppBuildConfig
 import com.duckduckgo.appbuildconfig.api.isInternalBuild
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.plugins.PluginPoint
 import com.duckduckgo.contentscopescripts.api.ContentScopeConfigPlugin
 import com.duckduckgo.di.scopes.AppScope
@@ -33,7 +34,6 @@ import com.squareup.moshi.Moshi.Builder
 import com.squareup.moshi.Types
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import java.util.*
 import java.util.concurrent.CopyOnWriteArrayList
 import javax.inject.Inject
@@ -87,53 +87,50 @@ class RealWebViewCompatContentScopeScripts @Inject constructor(
     override val javascriptInterface: String = getSecret()
     override val callbackName: String = getSecret()
 
+    @OnIo
     override suspend fun getScript(
         activeExperiments: List<Toggle>,
     ): String {
-        return withContext(dispatcherProvider.io()) {
-            var updateJS = false
+        var updateJS = false
 
-            val pluginParameters = getPluginParameters()
+        val pluginParameters = getPluginParameters()
 
-            if (cachedUnprotectTemporaryExceptions != unprotectedTemporary.unprotectedTemporaryExceptions) {
-                cacheUserUnprotectedTemporaryExceptions(unprotectedTemporary.unprotectedTemporaryExceptions)
-                updateJS = true
-            }
-
-            val contentScopeJson = getContentScopeJson(pluginParameters.config, cachedUnprotectTemporaryExceptions)
-            if (cachedContentScopeJson != contentScopeJson) {
-                cachedContentScopeJson = contentScopeJson
-                updateJS = true
-            }
-
-            if (cachedUserUnprotectedDomains != userAllowListRepository.domainsInUserAllowList()) {
-                cacheUserUnprotectedDomains(userAllowListRepository.domainsInUserAllowList())
-                updateJS = true
-            }
-
-            val userPreferencesJson = getUserPreferencesJson(pluginParameters.preferences, activeExperiments = activeExperiments)
-            if (cachedUserPreferencesJson != userPreferencesJson) {
-                cachedUserPreferencesJson = userPreferencesJson
-                updateJS = true
-            }
-
-            if (!this@RealWebViewCompatContentScopeScripts::cachedAdsJS.isInitialized || updateJS) {
-                cacheJs()
-            }
-            return@withContext cachedAdsJS
+        if (cachedUnprotectTemporaryExceptions != unprotectedTemporary.unprotectedTemporaryExceptions) {
+            cacheUserUnprotectedTemporaryExceptions(unprotectedTemporary.unprotectedTemporaryExceptions)
+            updateJS = true
         }
+
+        val contentScopeJson = getContentScopeJson(pluginParameters.config, cachedUnprotectTemporaryExceptions)
+        if (cachedContentScopeJson != contentScopeJson) {
+            cachedContentScopeJson = contentScopeJson
+            updateJS = true
+        }
+
+        if (cachedUserUnprotectedDomains != userAllowListRepository.domainsInUserAllowList()) {
+            cacheUserUnprotectedDomains(userAllowListRepository.domainsInUserAllowList())
+            updateJS = true
+        }
+
+        val userPreferencesJson = getUserPreferencesJson(pluginParameters.preferences, activeExperiments = activeExperiments)
+        if (cachedUserPreferencesJson != userPreferencesJson) {
+            cachedUserPreferencesJson = userPreferencesJson
+            updateJS = true
+        }
+
+        if (!this@RealWebViewCompatContentScopeScripts::cachedAdsJS.isInitialized || updateJS) {
+            cacheJs()
+        }
+        return cachedAdsJS
     }
 
+    @OnIo
     override suspend fun isEnabled(): Boolean {
-        return withContext(dispatcherProvider.io()) {
-            contentScopeScriptsFeature.self().isEnabled() && contentScopeScriptsFeature.useNewWebCompatApis().isEnabled()
-        }
+        return contentScopeScriptsFeature.self().isEnabled() && contentScopeScriptsFeature.useNewWebCompatApis().isEnabled()
     }
 
+    @OnIo
     override suspend fun isWebMessagingEnabled(): Boolean {
-        return withContext(dispatcherProvider.io()) {
-            isEnabled() && contentScopeScriptsFeature.useWebMessageListener().isEnabled()
-        }
+        return isEnabled() && contentScopeScriptsFeature.useWebMessageListener().isEnabled()
     }
 
     private fun getSecretKeyValuePair() = "\"messageSecret\":\"$secret\""

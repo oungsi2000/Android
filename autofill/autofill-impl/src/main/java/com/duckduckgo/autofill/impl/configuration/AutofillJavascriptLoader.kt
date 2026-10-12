@@ -18,10 +18,10 @@ package com.duckduckgo.autofill.impl.configuration
 
 import com.duckduckgo.autofill.impl.configuration.AutofillJavascriptEnvironmentConfiguration.AutofillJsConfigType
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import javax.inject.Inject
 
@@ -39,12 +39,11 @@ class DefaultAutofillJavascriptLoader @Inject constructor(
     private val productionJavascript: String by lazy { loadJs(AUTOFILL_JS_FILENAME) }
     private val debugJavascript: String by lazy { loadJs(AUTOFILL_JS_DEBUG_FILENAME) }
 
+    @OnIo
     override suspend fun getAutofillJavascript(): String {
-        return withContext(dispatchers.io()) {
-            when (filenameProvider.getConfigType()) {
-                AutofillJsConfigType.Production -> productionJavascript
-                AutofillJsConfigType.Debug -> debugJavascript
-            }
+        return when (filenameProvider.getConfigType()) {
+            AutofillJsConfigType.Production -> productionJavascript
+            AutofillJsConfigType.Debug -> debugJavascript
         }
     }
 

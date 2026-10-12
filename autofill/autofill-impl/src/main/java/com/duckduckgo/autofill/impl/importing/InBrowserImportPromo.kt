@@ -22,10 +22,10 @@ import com.duckduckgo.autofill.impl.store.InternalAutofillStore
 import com.duckduckgo.autofill.impl.store.NeverSavedSiteRepository
 import com.duckduckgo.browsermode.api.BrowserMode
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import javax.inject.Inject
 
@@ -49,67 +49,66 @@ class RealInBrowserImportPromo @Inject constructor(
     private val inBrowserPromoPreviousPromptsStore: InBrowserPromoPreviousPromptsStore,
 ) : InBrowserImportPromo {
 
+    @OnIo
     override suspend fun canShowPromo(
         credentialsAvailableForCurrentPage: Boolean,
         url: String?,
         browserMode: BrowserMode,
     ): Boolean {
-        return withContext(dispatchers.io()) {
-            if (credentialsAvailableForCurrentPage) {
-                return@withContext false
-            }
-
-            // Fire mode is an ephemeral session and never offers to import passwords from Google.
-            if (browserMode == BrowserMode.FIRE) {
-                return@withContext false
-            }
-
-            if (url == null || url.isExcludedFromPromo()) {
-                return@withContext false
-            }
-
-            if (inBrowserPromoPreviousPromptsStore.hasPromoBeenDisplayed(url)) {
-                return@withContext false
-            }
-
-            if (featureEnabled().not()) {
-                return@withContext false
-            }
-
-            if (autofillStore.hasEverImportedPasswords) {
-                return@withContext false
-            }
-
-            if (autofillStore.hasDeclinedInBrowserPasswordImportPromo) {
-                return@withContext false
-            }
-
-            autofillStore.getCredentialCount().firstOrNull()?.fold(
-                onSuccess = { value ->
-                    if ((value) >= MAX_CREDENTIALS_FOR_PROMO) {
-                        return@withContext false
-                    }
-                },
-                onFailure = {
-                    logcat(TAG) { "Credential count retrieval failed, fallback to disabled" }
-                    return@withContext false
-                },
-            ) ?: return@withContext false
-
-            if (autofillStore.inBrowserImportPromoShownCount >= MAX_PROMO_SHOWN_COUNT) {
-                return@withContext false
-            }
-
-            if (neverSavedSiteRepository.isInNeverSaveList(url)) {
-                return@withContext false
-            }
-
-            if (passwordImportAvailability.canImport().not()) {
-                return@withContext false
-            }
-
-            return@withContext true
+        if (credentialsAvailableForCurrentPage) {
+            return false
         }
+
+        // Fire mode is an ephemeral session and never offers to import passwords from Google.
+        if (browserMode == BrowserMode.FIRE) {
+            return false
+        }
+
+        if (url == null || url.isExcludedFromPromo()) {
+            return false
+        }
+
+        if (inBrowserPromoPreviousPromptsStore.hasPromoBeenDisplayed(url)) {
+            return false
+        }
+
+        if (featureEnabled().not()) {
+            return false
+        }
+
+        if (autofillStore.hasEverImportedPasswords) {
+            return false
+        }
+
+        if (autofillStore.hasDeclinedInBrowserPasswordImportPromo) {
+            return false
+        }
+
+        autofillStore.getCredentialCount().firstOrNull()?.fold(
+            onSuccess = { value ->
+                if ((value) >= MAX_CREDENTIALS_FOR_PROMO) {
+                    return false
+                }
+            },
+            onFailure = {
+                logcat(TAG) { "Credential count retrieval failed, fallback to disabled" }
+                return false
+            },
+        ) ?: return false
+
+        if (autofillStore.inBrowserImportPromoShownCount >= MAX_PROMO_SHOWN_COUNT) {
+            return false
+        }
+
+        if (neverSavedSiteRepository.isInNeverSaveList(url)) {
+            return false
+        }
+
+        if (passwordImportAvailability.canImport().not()) {
+            return false
+        }
+
+        return true
     }
 
     private fun String.isExcludedFromPromo(): Boolean {

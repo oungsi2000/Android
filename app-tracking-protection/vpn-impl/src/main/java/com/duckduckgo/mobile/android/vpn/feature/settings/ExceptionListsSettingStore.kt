@@ -16,6 +16,7 @@
 
 package com.duckduckgo.mobile.android.vpn.feature.settings
 
+import com.duckduckgo.common.utils.LogFailure
 import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.common.utils.DispatcherProvider
 import com.duckduckgo.di.scopes.AppScope
@@ -70,9 +71,7 @@ class ExceptionListsSettingStore @Inject constructor(
                     vpnFeaturesRegistry.refreshFeature(AppTpVpnFeature.APPTP_VPN)
                 }
             }
-        }.onFailure {
-            logcat(WARN) { it.asLog() }
-        }
+        }.onFailure @LogFailure(priority = WARN) {}
     }
 
     private data class JsonConfigModel(

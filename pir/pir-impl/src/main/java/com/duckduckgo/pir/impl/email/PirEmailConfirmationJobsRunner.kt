@@ -19,6 +19,7 @@ package com.duckduckgo.pir.impl.email
 import android.content.Context
 import com.duckduckgo.common.utils.CurrentTimeProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.pir.impl.common.PirJob.RunType.EMAIL_CONFIRMATION
 import com.duckduckgo.pir.impl.models.Broker
@@ -111,9 +112,10 @@ class RealPirEmailConfirmationJobsRunner @Inject constructor(
         emailConfirmation.stop()
     }
 
+    @OnIo
     override suspend fun debugFetchLinkForJob(
         jobRecord: EmailConfirmationJobRecord,
-    ): Result<EmailConfirmationJobRecord> = withContext(dispatcherProvider.io()) {
+    ): Result<EmailConfirmationJobRecord> {
         logcat { "PIR-EMAIL-CONFIRMATION: Fetching link for job ${jobRecord.extractedProfileId}" }
 
         val emailDataList = listOf(jobRecord.emailData)
@@ -122,37 +124,37 @@ class RealPirEmailConfirmationJobsRunner @Inject constructor(
         val status = statusMap[jobRecord.emailData]
         if (status == null) {
             logcat { "PIR-EMAIL-CONFIRMATION: No status returned for email ${jobRecord.emailData.email}" }
-            return@withContext Result.failure(IllegalStateException("No status returned"))
+            return Result.failure(IllegalStateException("No status returned"))
         }
 
         logcat { "PIR-EMAIL-CONFIRMATION: Status for ${jobRecord.emailData.email}: $status" }
 
-        when (status) {
+        return when (status) {
             is EmailConfirmationLinkFetchStatus.Ready -> {
                 val link = status.data[KEY_LINK]
                 if (link != null) {
                     val updatedRecord = jobRecordUpdater.markEmailConfirmationWithLink(jobRecord.extractedProfileId, link)
                     if (updatedRecord != null) {
                         logcat { "PIR-EMAIL-CONFIRMATION: Link fetched and saved successfully" }
-                        return@withContext Result.success(updatedRecord)
+                        return Result.success(updatedRecord)
                     } else {
-                        return@withContext Result.failure(IllegalStateException("Failed to save link"))
+                        return Result.failure(IllegalStateException("Failed to save link"))
                     }
                 } else {
-                    return@withContext Result.failure(IllegalStateException("Link not found in response data"))
+                    return Result.failure(IllegalStateException("Link not found in response data"))
                 }
             }
 
             is EmailConfirmationLinkFetchStatus.Pending -> {
-                return@withContext Result.failure(IllegalStateException("Link is still pending"))
+                return Result.failure(IllegalStateException("Link is still pending"))
             }
 
             is EmailConfirmationLinkFetchStatus.Error -> {
-                return@withContext Result.failure(IllegalStateException("Error: ${status.error}"))
+                return Result.failure(IllegalStateException("Error: ${status.error}"))
             }
 
             is EmailConfirmationLinkFetchStatus.Unknown -> {
-                return@withContext Result.failure(IllegalStateException("Unknown status: ${status.errorCode}"))
+                return Result.failure(IllegalStateException("Unknown status: ${status.errorCode}"))
             }
         }
     }

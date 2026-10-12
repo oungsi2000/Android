@@ -22,8 +22,8 @@ import android.widget.RemoteViewsService
 import com.duckduckgo.app.browser.R
 import com.duckduckgo.app.global.DuckDuckGoApplication
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.savedsites.api.SavedSitesRepository
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import javax.inject.Inject
 
@@ -87,10 +87,9 @@ class EmptyFavoritesWidgetItemFactory(
         return true
     }
 
+    @OnIo
     private suspend fun getItemsCountFromFavorites(): Int {
-        return withContext(dispatchers.io()) {
-            if (savedSitesRepository.hasFavorites()) 1 else 0
-        }
+        return if (savedSitesRepository.hasFavorites()) 1 else 0
     }
 
     private fun inject(context: Context) {

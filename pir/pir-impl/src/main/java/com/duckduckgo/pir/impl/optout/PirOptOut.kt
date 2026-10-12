@@ -20,6 +20,7 @@ import android.content.Context
 import android.webkit.WebView
 import com.duckduckgo.common.utils.CurrentTimeProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.plugins.PluginPoint
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.pir.impl.PirConstants
@@ -44,7 +45,6 @@ import com.duckduckgo.pir.impl.store.db.EventType
 import com.duckduckgo.pir.impl.store.db.PirEventLog
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import javax.inject.Inject
 
@@ -118,10 +118,11 @@ class RealPirOptOut @Inject constructor(
     private val runners: MutableList<PirActionsRunner> = mutableListOf()
     private var maxWebViewCount = 1
 
+    @OnIo
     override suspend fun executeOptOutForJobs(
         jobRecords: List<OptOutJobRecord>,
         context: Context,
-    ): Result<Unit> = withContext(dispatcherProvider.io()) {
+    ): Result<Unit> {
         logcat { "PIR-OPT-OUT: Running opt-out on the following records [${jobRecords.size}]: $jobRecords on ${Thread.currentThread().name}" }
         onJobStarted()
         emitStartPixel()
@@ -129,7 +130,7 @@ class RealPirOptOut @Inject constructor(
         if (jobRecords.isEmpty()) {
             logcat { "PIR-OPT-OUT: Nothing to opt-out." }
             completeOptOut()
-            return@withContext Result.success(Unit)
+            return Result.success(Unit)
         }
 
         if (runners.isNotEmpty()) {
@@ -140,7 +141,7 @@ class RealPirOptOut @Inject constructor(
         if (activeBrokers.isEmpty()) {
             logcat { "PIR-OPT-OUT: No active brokers here." }
             completeOptOut()
-            return@withContext Result.success(Unit)
+            return Result.success(Unit)
         }
 
         val processedJobRecords = processJobRecords(jobRecords, activeBrokers)
@@ -148,7 +149,7 @@ class RealPirOptOut @Inject constructor(
         if (processedJobRecords.isEmpty()) {
             logcat { "PIR-OPT-OUT: No valid records. Nothing to opt-out." }
             completeOptOut()
-            return@withContext Result.success(Unit)
+            return Result.success(Unit)
         }
 
         val script = pirCssScriptLoader.getScript()
@@ -164,7 +165,7 @@ class RealPirOptOut @Inject constructor(
         pirWorkDistributor.executeAll(runners = runners, work = processedJobRecords)
 
         completeOptOut()
-        return@withContext Result.success(Unit)
+        return Result.success(Unit)
     }
 
     private suspend fun processJobRecords(
@@ -247,10 +248,11 @@ class RealPirOptOut @Inject constructor(
         onJobCompleted()
     }
 
+    @OnIo
     override suspend fun debugExecute(
         brokers: List<String>,
         webView: WebView,
-    ): Result<Unit> = withContext(dispatcherProvider.io()) {
+    ): Result<Unit> {
         onJobStarted()
 
         if (runners.isNotEmpty()) {
@@ -294,13 +296,14 @@ class RealPirOptOut @Inject constructor(
 
         onJobCompleted()
         webViewDataCleaner.cleanWebViewData()
-        return@withContext Result.success(Unit)
+        return Result.success(Unit)
     }
 
+    @OnIo
     override suspend fun execute(
         brokers: List<String>,
         context: Context,
-    ): Result<Unit> = withContext(dispatcherProvider.io()) {
+    ): Result<Unit> {
         onJobStarted()
         emitStartPixel()
         if (runners.isNotEmpty()) {
@@ -341,7 +344,7 @@ class RealPirOptOut @Inject constructor(
         pirWorkDistributor.executeAll(runners = runners, work = allSteps)
 
         completeOptOut()
-        return@withContext Result.success(Unit)
+        return Result.success(Unit)
     }
 
     private suspend fun obtainProfiles(): List<ProfileQuery> {
@@ -350,11 +353,12 @@ class RealPirOptOut @Inject constructor(
         }
     }
 
+    @OnIo
     override suspend fun executeForBrokersWithRecords(
         context: Context,
-    ): Result<Unit> = withContext(dispatcherProvider.io()) {
+    ): Result<Unit> {
         val brokers = repository.getBrokersForOptOut(formOptOutOnly = true)
-        return@withContext execute(brokers, context)
+        return execute(brokers, context)
     }
 
     private fun cleanRunners() {

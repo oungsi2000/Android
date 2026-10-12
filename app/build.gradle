@@ -5,6 +5,7 @@ import com.gradle.develocity.agent.gradle.test.ImportJUnitXmlReports
 
 plugins {
     id 'com.android.application'
+    id 'io.github.mole-labs.aspectk'
 
     id 'com.google.devtools.ksp'
     id 'com.squareup.anvil'
@@ -146,6 +147,10 @@ android {
         debug {
             applicationIdSuffix ".debug"
             pseudoLocalesEnabled false
+            // EXPERIMENT: run R8 on the debug build with the rules the minified internal release
+            // uses, to see whether AspectK's woven calls survive it. Debug-signed, so installable.
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro', 'proguard-rules-internal.pro'
             manifestPlaceholders = [
                     appIcon     : "@mipmap/ic_launcher_blue",
                     appIconRound: "@mipmap/ic_launcher_blue_round"

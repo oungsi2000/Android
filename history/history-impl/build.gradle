@@ -19,6 +19,7 @@ plugins {
     id 'com.squareup.anvil'
     id 'com.google.devtools.ksp'
     id 'androidx.room'
+    id 'io.github.mole-labs.aspectk'
 }
 
 apply from: "$rootProject.projectDir/gradle/android-library.gradle"

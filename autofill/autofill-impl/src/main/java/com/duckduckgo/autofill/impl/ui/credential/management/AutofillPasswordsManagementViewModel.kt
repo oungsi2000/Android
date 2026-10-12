@@ -97,6 +97,7 @@ import com.duckduckgo.autofill.impl.ui.credential.repository.DuckAddressStatusRe
 import com.duckduckgo.autofill.impl.ui.credential.repository.DuckAddressStatusRepository.ActivationStatusResult
 import com.duckduckgo.autofill.impl.urlmatcher.AutofillUrlMatcher
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.extensions.toBinaryString
 import com.duckduckgo.di.scopes.ActivityScope
 import com.duckduckgo.sync.api.engine.SyncEngine
@@ -109,7 +110,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.INFO
 import logcat.LogPriority.VERBOSE
 import logcat.logcat
@@ -297,18 +297,17 @@ class AutofillPasswordsManagementViewModel @Inject constructor(
         }
     }
 
+    @OnIo
     private suspend fun showPromotionIfEligible() {
-        withContext(dispatchers.io()) {
-            val userIsSearching = _viewState.value.credentialSearchQuery.isNotEmpty()
+        val userIsSearching = _viewState.value.credentialSearchQuery.isNotEmpty()
 
-            val canShowPromo = when {
-                userIsSearching -> false
-                else -> true
-            }
-
-            _viewState.value = _viewState.value.copy(canShowPromo = canShowPromo)
-            addCommand(ReevalutePromotions)
+        val canShowPromo = when {
+            userIsSearching -> false
+            else -> true
         }
+
+        _viewState.value = _viewState.value.copy(canShowPromo = canShowPromo)
+        addCommand(ReevalutePromotions)
     }
 
     suspend fun launchDeviceAuth(suppressAuthPrompt: Boolean = false) {

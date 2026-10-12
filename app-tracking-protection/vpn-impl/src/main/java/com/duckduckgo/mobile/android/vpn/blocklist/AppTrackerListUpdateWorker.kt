@@ -27,6 +27,7 @@ import androidx.work.WorkerParameters
 import com.duckduckgo.anvil.annotations.ContributesWorker
 import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.mobile.android.vpn.di.AppTpBlocklistUpdateMutex
 import com.duckduckgo.mobile.android.vpn.pixels.DeviceShieldPixels
@@ -35,7 +36,6 @@ import com.duckduckgo.mobile.android.vpn.trackers.AppTrackerMetadata
 import com.squareup.anvil.annotations.ContributesMultibinding
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.WARN
 import logcat.logcat
 import java.util.concurrent.TimeUnit
@@ -60,31 +60,30 @@ class AppTrackerListUpdateWorker(context: Context, workerParameters: WorkerParam
     @Inject
     lateinit var deviceShieldPixels: DeviceShieldPixels
 
+    @OnIo
     override suspend fun doWork(): Result {
-        return withContext(dispatchers.io()) {
-            val updateBlocklistResult = mutex.withLock {
-                val res = updateTrackerBlocklist()
+        val updateBlocklistResult = mutex.withLock {
+            val res = updateTrackerBlocklist()
 
-                // Report current blocklist status after update
-                deviceShieldPixels.reportBlocklistStats(
-                    mapOf(
-                        "blocklist_etag" to vpnDatabase.vpnAppTrackerBlockingDao().getTrackerBlocklistMetadata()?.eTag.toString(),
-                        "blocklist_size" to vpnDatabase.vpnAppTrackerBlockingDao().getTrackerBlockListSize().toString(),
-                    ),
-                )
+            // Report current blocklist status after update
+            deviceShieldPixels.reportBlocklistStats(
+                mapOf(
+                    "blocklist_etag" to vpnDatabase.vpnAppTrackerBlockingDao().getTrackerBlocklistMetadata()?.eTag.toString(),
+                    "blocklist_size" to vpnDatabase.vpnAppTrackerBlockingDao().getTrackerBlockListSize().toString(),
+                ),
+            )
 
-                res
-            }
-
-            val success = Result.success()
-            if (updateBlocklistResult != success) {
-                logcat(WARN) { "One of the app tracker list updates failed, scheduling a retry" }
-                return@withContext Result.retry()
-            }
-
-            logcat { "Tracker list updates success" }
-            return@withContext success
+            res
         }
+
+        val success = Result.success()
+        if (updateBlocklistResult != success) {
+            logcat(WARN) { "One of the app tracker list updates failed, scheduling a retry" }
+            return Result.retry()
+        }
+
+        logcat { "Tracker list updates success" }
+        return success
     }
 
     private fun updateTrackerBlocklist(): Result {

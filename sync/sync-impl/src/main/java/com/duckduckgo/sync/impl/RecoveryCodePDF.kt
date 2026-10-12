@@ -23,7 +23,7 @@ import android.view.LayoutInflater
 import android.view.View
 import androidx.annotation.WorkerThread
 import com.duckduckgo.common.ui.view.toPx
-import com.duckduckgo.common.utils.checkMainThread
+import com.duckduckgo.common.utils.CheckNotMainThread
 import com.duckduckgo.di.scopes.ActivityScope
 import com.duckduckgo.sync.impl.databinding.ViewRecoveryCodePdfBinding
 import com.squareup.anvil.annotations.ContributesBinding
@@ -44,12 +44,11 @@ class RecoveryCodePDFImpl @Inject constructor(
     private val qrEncoder: QREncoder,
 ) : RecoveryCodePDF {
 
+    @CheckNotMainThread
     override fun generateAndStoreRecoveryCodePDF(
         viewContext: Context,
         recoveryCodeB64: String,
     ): File {
-        checkMainThread()
-
         val bitmapQR = qrEncoder.encodeAsBitmap(recoveryCodeB64, R.dimen.qrSizeLarge, R.dimen.qrSizeLarge)
         val pdfDocument = PdfDocument()
         val inflater = LayoutInflater.from(viewContext)

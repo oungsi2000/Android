@@ -35,6 +35,7 @@ import com.duckduckgo.autofill.impl.partialsave.UsernameBackFiller.BackFillResul
 import com.duckduckgo.autofill.impl.partialsave.UsernameBackFiller.BackFillResult.BackFillSupported
 import com.duckduckgo.autofill.impl.store.InternalAutofillStore
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.plugins.PluginPoint
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesMultibinding
@@ -145,23 +146,22 @@ class ResultHandlerUseGeneratedPassword @Inject constructor(
         }
     }
 
+    @OnIo
     private suspend fun updateCredentialsIfPasswordMissing(
         originalUrl: String,
         username: String?,
         password: String,
     ) {
-        withContext(dispatchers.io()) {
-            autofillStore.getCredentials(originalUrl)
-                .filter { it.username == username }
-                .filter { it.password.isNullOrEmpty() }
-                .also { list ->
-                    logcat(VERBOSE) {
-                        "Found ${list.size} credentials with missing password for username=$username and url=$originalUrl"
-                    }
+        autofillStore.getCredentials(originalUrl)
+            .filter { it.username == username }
+            .filter { it.password.isNullOrEmpty() }
+            .also { list ->
+                logcat(VERBOSE) {
+                    "Found ${list.size} credentials with missing password for username=$username and url=$originalUrl"
                 }
-                .map { it.copy(password = password) }
-                .forEach { autofillStore.updateCredentials(originalUrl, it, CredentialUpdateType.Password) }
-        }
+            }
+            .map { it.copy(password = password) }
+            .forEach { autofillStore.updateCredentials(originalUrl, it, CredentialUpdateType.Password) }
     }
 
     private suspend fun updateLoginIfDifferent(

@@ -16,6 +16,7 @@
 
 package com.duckduckgo.mobile.android.vpn.bugreport
 
+import com.duckduckgo.common.utils.LogFailure
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.ConnectivityManager
@@ -125,17 +126,13 @@ class NetworkTypeMonitor @Inject constructor(
     ) {
         kotlin.runCatching {
             registerNetworkCallback(networkRequest, networkCallback)
-        }.onFailure {
-            logcat(ERROR) { it.asLog() }
-        }
+        }.onFailure @LogFailure(priority = ERROR) {}
     }
 
     private fun ConnectivityManager.safeUnregisterNetworkCallback(networkCallback: NetworkCallback) {
         kotlin.runCatching {
             unregisterNetworkCallback(networkCallback)
-        }.onFailure {
-            logcat(ERROR) { it.asLog() }
-        }
+        }.onFailure @LogFailure(priority = ERROR) {}
     }
 
     private fun updateNetworkInfo(connection: Connection) {

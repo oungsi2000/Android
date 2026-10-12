@@ -23,6 +23,7 @@ import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.common.ui.view.dialog.TextAlertDialogBuilder
 import com.duckduckgo.common.ui.view.dialog.TextAlertDialogBuilder.EventListener
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.data.store.api.SharedPreferencesProvider
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.navigation.api.GlobalActivityStarter
@@ -127,8 +128,9 @@ class RealAccessRevokedDialog @Inject constructor(
         }
     }
 
-    private suspend fun isShown(): Boolean = withContext(dispatcherProvider.io()) {
-        return@withContext preferences.getBoolean(KEY_END_DIALOG_SHOWN, false)
+    @OnIo
+    private suspend fun isShown(): Boolean {
+        return preferences.getBoolean(KEY_END_DIALOG_SHOWN, false)
     }
 
     private suspend fun markAsShown() = withContext(dispatcherProvider.io()) {

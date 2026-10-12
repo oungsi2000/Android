@@ -20,6 +20,7 @@ import android.content.Context
 import android.webkit.WebView
 import com.duckduckgo.common.utils.CurrentTimeProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.plugins.PluginPoint
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.pir.impl.PirConstants.DEFAULT_PROFILE_QUERIES
@@ -185,10 +186,11 @@ class RealPirScan @Inject constructor(
         return@withContext Result.success(Unit)
     }
 
+    @OnIo
     override suspend fun debugExecute(
         brokers: List<String>,
         webView: WebView,
-    ): Result<Unit> = withContext(dispatcherProvider.io()) {
+    ): Result<Unit> {
         onJobStarted()
         if (runners.isNotEmpty()) {
             cleanPreviousRun()
@@ -236,7 +238,7 @@ class RealPirScan @Inject constructor(
 
         onJobCompleted()
         webViewDataCleaner.cleanWebViewData()
-        return@withContext Result.success(Unit)
+        return Result.success(Unit)
     }
 
     private suspend fun processJobRecords(
@@ -301,11 +303,12 @@ class RealPirScan @Inject constructor(
         onJobCompleted()
     }
 
+    @OnIo
     override suspend fun execute(
         brokers: List<String>,
         context: Context,
         runType: RunType,
-    ): Result<Unit> = withContext(dispatcherProvider.io()) {
+    ): Result<Unit> {
         onJobStarted()
 
         emitScanStartPixel(runType)
@@ -348,7 +351,7 @@ class RealPirScan @Inject constructor(
         pirWorkDistributor.executeAll(runners = runners, work = work)
 
         completeScan(runType)
-        return@withContext Result.success(Unit)
+        return Result.success(Unit)
     }
 
     private suspend fun cleanPreviousRun() {
@@ -367,12 +370,13 @@ class RealPirScan @Inject constructor(
         }
     }
 
+    @OnIo
     override suspend fun executeAllBrokers(
         context: Context,
         runType: RunType,
-    ): Result<Unit> = withContext(dispatcherProvider.io()) {
+    ): Result<Unit> {
         val brokers = repository.getAllBrokersForScan()
-        return@withContext execute(brokers, context, runType)
+        return execute(brokers, context, runType)
     }
 
     override fun stop() {

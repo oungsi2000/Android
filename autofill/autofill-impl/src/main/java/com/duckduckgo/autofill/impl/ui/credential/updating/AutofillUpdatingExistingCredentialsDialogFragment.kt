@@ -46,6 +46,7 @@ import com.duckduckgo.autofill.impl.ui.credential.updating.AutofillUpdatingExist
 import com.duckduckgo.common.ui.applyBottomSystemBarInsetPadding
 import com.duckduckgo.common.utils.DispatcherProvider
 import com.duckduckgo.common.utils.FragmentViewModelFactory
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.FragmentScope
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -55,7 +56,6 @@ import kotlinx.coroutines.CoroutineStart.LAZY
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import javax.inject.Inject
 
@@ -233,13 +233,12 @@ class AutofillUpdatingExistingCredentialsDialogFragment : BottomSheetDialogFragm
         }
     }
 
+    @OnIo
     private suspend fun paramsForUpdateLoginPixel(): Map<String, String> {
-        return withContext(dispatchers.io()) {
-            if (autofillFeature.partialFormSaves().isEnabled()) {
-                mapOf(PIXEL_PARAM_WAS_USERNAME_BACKFILLED to wasUsernameBackFilled.await().toString())
-            } else {
-                emptyMap()
-            }
+        return if (autofillFeature.partialFormSaves().isEnabled()) {
+            mapOf(PIXEL_PARAM_WAS_USERNAME_BACKFILLED to wasUsernameBackFilled.await().toString())
+        } else {
+            emptyMap()
         }
     }
 

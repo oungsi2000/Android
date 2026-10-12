@@ -21,13 +21,13 @@ import com.duckduckgo.autofill.impl.importing.DomainNameNormalizer
 import com.duckduckgo.autofill.impl.importing.ExistingCredentialMatchDetector
 import com.duckduckgo.autofill.impl.urlmatcher.AutofillUrlMatcher
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.credentialexchange.api.CredentialExchange
 import com.duckduckgo.credentialexchange.api.CredentialExchangeFailure
 import com.duckduckgo.credentialexchange.api.CredentialExchangeResult
 import com.duckduckgo.credentialexchange.api.ExchangedCredential
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
@@ -81,12 +81,13 @@ class RealCredentialExchangePasswordImporter @Inject constructor(
         }
     }
 
-    private suspend fun convertAndDeduplicate(credentials: List<ExchangedCredential>): List<LoginCredentials> = withContext(dispatchers.io()) {
+    @OnIo
+    private suspend fun convertAndDeduplicate(credentials: List<ExchangedCredential>): List<LoginCredentials> {
         val converted = credentials
             .map { it.toLoginCredentials() }
             .filterNot { it.allFieldsEmpty() }
             .distinct()
-        existingCredentialMatchDetector.filterExistingCredentials(converted)
+        return existingCredentialMatchDetector.filterExistingCredentials(converted)
     }
 
     private suspend fun ExchangedCredential.toLoginCredentials() = LoginCredentials(

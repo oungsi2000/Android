@@ -18,6 +18,7 @@ package com.duckduckgo.pir.impl.store
 
 import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.pir.impl.models.ExtractedProfile
 import com.duckduckgo.pir.impl.store.db.BrokerScanEventType.BROKER_ERROR
@@ -46,7 +47,6 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
 import logcat.logcat
 import javax.inject.Inject
@@ -132,41 +132,39 @@ class RealPirEventsRepository @Inject constructor(
         prepareDatabase()
     }
 
+    @OnIo
     override suspend fun deleteAllScanResults() {
-        withContext(dispatcherProvider.io()) {
-            scanResultsDao()?.deleteAllScanCompletedBroker()
-            scanLogDao()?.deleteAllBrokerScanEvents()
-        }
+        scanResultsDao()?.deleteAllScanCompletedBroker()
+        scanLogDao()?.deleteAllBrokerScanEvents()
     }
 
-    override suspend fun getScanErrorResultsCount(): Int = withContext(dispatcherProvider.io()) {
-        scanLogDao()?.getAllBrokerScanEvents()?.filter { it.eventType == BROKER_ERROR }?.size ?: 0
+    @OnIo
+    override suspend fun getScanErrorResultsCount(): Int {
+        return scanLogDao()?.getAllBrokerScanEvents()?.filter { it.eventType == BROKER_ERROR }?.size ?: 0
     }
 
-    override suspend fun getScanSuccessResultsCount(): Int = withContext(dispatcherProvider.io()) {
-        scanLogDao()?.getAllBrokerScanEvents()?.filter { it.eventType == BROKER_SUCCESS }?.size ?: 0
+    @OnIo
+    override suspend fun getScanSuccessResultsCount(): Int {
+        return scanLogDao()?.getAllBrokerScanEvents()?.filter { it.eventType == BROKER_SUCCESS }?.size ?: 0
     }
 
     override fun getAllEventLogsFlow(): Flow<List<PirEventLog>> = flow {
         emitAll(scanLogDao()?.getAllEventLogsFlow() ?: flowOf(listOf()))
     }
 
+    @OnIo
     override suspend fun saveEventLog(pirEventLog: PirEventLog) {
-        withContext(dispatcherProvider.io()) {
-            scanLogDao()?.insertEventLog(pirEventLog)
-        }
+        scanLogDao()?.insertEventLog(pirEventLog)
     }
 
+    @OnIo
     override suspend fun saveBrokerScanLog(pirBrokerScanLog: PirBrokerScanLog) {
-        withContext(dispatcherProvider.io()) {
-            scanLogDao()?.insertBrokerScanEvent(pirBrokerScanLog)
-        }
+        scanLogDao()?.insertBrokerScanEvent(pirBrokerScanLog)
     }
 
+    @OnIo
     override suspend fun deleteEventLogs() {
-        withContext(dispatcherProvider.io()) {
-            scanLogDao()?.deleteAll()
-        }
+        scanLogDao()?.deleteAll()
     }
 
     override fun getScannedBrokersFlow(): Flow<List<ScanCompletedBroker>> = flow {
@@ -200,13 +198,14 @@ class RealPirEventsRepository @Inject constructor(
         emitAll(optOutResultsDao()?.getOptOutActionLogFlow() ?: flowOf(emptyList()))
     }
 
+    @OnIo
     override suspend fun saveScanCompletedBroker(
         brokerName: String,
         profileQueryId: Long,
         startTimeInMillis: Long,
         endTimeInMillis: Long,
         isSuccess: Boolean,
-    ): Unit = withContext(dispatcherProvider.io()) {
+    ) {
         scanResultsDao()?.insertScanCompletedBroker(
             ScanCompletedBroker(
                 brokerName = brokerName,
@@ -218,13 +217,14 @@ class RealPirEventsRepository @Inject constructor(
         )
     }
 
+    @OnIo
     override suspend fun saveOptOutCompleted(
         brokerName: String,
         extractedProfile: ExtractedProfile,
         startTimeInMillis: Long,
         endTimeInMillis: Long,
         isSubmitSuccess: Boolean,
-    ): Unit = withContext(dispatcherProvider.io()) {
+    ) {
         optOutResultsDao()?.insertOptOutCompletedBroker(
             OptOutCompletedBroker(
                 brokerName = brokerName,
@@ -236,6 +236,7 @@ class RealPirEventsRepository @Inject constructor(
         )
     }
 
+    @OnIo
     override suspend fun saveOptOutActionLog(
         brokerName: String,
         extractedProfile: ExtractedProfile,
@@ -243,7 +244,7 @@ class RealPirEventsRepository @Inject constructor(
         actionType: String,
         isError: Boolean,
         result: String,
-    ): Unit = withContext(dispatcherProvider.io()) {
+    ) {
         optOutResultsDao()?.insertOptOutActionLog(
             OptOutActionLog(
                 brokerName = brokerName,
@@ -256,15 +257,17 @@ class RealPirEventsRepository @Inject constructor(
         )
     }
 
-    override suspend fun deleteAllOptOutData(): Unit = withContext(dispatcherProvider.io()) {
+    @OnIo
+    override suspend fun deleteAllOptOutData() {
         optOutResultsDao()?.deleteAll()
     }
 
+    @OnIo
     override suspend fun saveEmailConfirmationLog(
         eventTimeInMillis: Long,
         type: EmailConfirmationEventType,
         detail: String,
-    ): Unit = withContext(dispatcherProvider.io()) {
+    ) {
         emailConfirmationLogDao()?.insertEmailConfirmationLog(
             PirEmailConfirmationLog(
                 eventTimeInMillis = eventTimeInMillis,
@@ -278,17 +281,17 @@ class RealPirEventsRepository @Inject constructor(
         emitAll(emailConfirmationLogDao()?.getAllEmailConfirmationLogsFlow() ?: flowOf(emptyList()))
     }
 
-    override suspend fun deleteAllEmailConfirmationsLogs(): Unit = withContext(dispatcherProvider.io()) {
+    @OnIo
+    override suspend fun deleteAllEmailConfirmationsLogs() {
         emailConfirmationLogDao()?.deleteAllEmailConfirmationLogs()
     }
 
+    @OnIo
     override suspend fun clearAllData() {
-        withContext(dispatcherProvider.io()) {
-            scanResultsDao()?.deleteAllScanCompletedBroker()
-            scanLogDao()?.deleteAll()
-            optOutResultsDao()?.deleteAll()
-            emailConfirmationLogDao()?.deleteAllEmailConfirmationLogs()
-        }
+        scanResultsDao()?.deleteAllScanCompletedBroker()
+        scanLogDao()?.deleteAll()
+        optOutResultsDao()?.deleteAll()
+        emailConfirmationLogDao()?.deleteAllEmailConfirmationLogs()
     }
 
     private suspend fun prepareDatabase(): PirDatabase? {

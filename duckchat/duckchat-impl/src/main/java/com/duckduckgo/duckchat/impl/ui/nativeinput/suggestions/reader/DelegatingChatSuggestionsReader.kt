@@ -17,6 +17,7 @@
 package com.duckduckgo.duckchat.impl.ui.nativeinput.suggestions.reader
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.ActivityScope
 import com.duckduckgo.duckchat.impl.feature.DuckChatFeature
 import com.duckduckgo.duckchat.impl.pixel.DuckChatPixels
@@ -26,7 +27,6 @@ import com.duckduckgo.duckchat.store.impl.DuckAiChatStore
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.Lazy
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import javax.inject.Inject
 
@@ -48,7 +48,8 @@ class DelegatingChatSuggestionsReader @Inject constructor(
 
     private var activeReader: ChatSuggestionsReader? = null
 
-    override suspend fun fetchSuggestions(query: String): List<ChatSuggestion> = withContext(dispatchers.io()) {
+    @OnIo
+    override suspend fun fetchSuggestions(query: String): List<ChatSuggestion> {
         val reader = if (store.hasMigrated() && feature.useNativeStorageChatData().isEnabled()) nativeReader else webViewReader
         if (activeReader != null && activeReader !== reader) tearDown()
         activeReader = reader
@@ -56,7 +57,7 @@ class DelegatingChatSuggestionsReader @Inject constructor(
         pixels.get().reportNativeStorageReaderUsed(native = reader === nativeReader)
         val result = reader.fetchSuggestions(query)
         suggestionsStore.setHasChatSuggestions(result.isNotEmpty())
-        return@withContext result
+        return result
     }
 
     override fun tearDown() {

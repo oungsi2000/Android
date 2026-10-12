@@ -19,9 +19,9 @@ package com.duckduckgo.autofill.impl.email.incontext.availability
 import com.duckduckgo.autofill.impl.email.incontext.store.EmailProtectionInContextDataStore
 import com.duckduckgo.browser.api.UserBrowserProperties
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface EmailProtectionInContextRecentInstallChecker {
@@ -35,10 +35,11 @@ class RealEmailProtectionInContextRecentInstallChecker @Inject constructor(
     private val dispatchers: DispatcherProvider,
 ) : EmailProtectionInContextRecentInstallChecker {
 
-    override suspend fun isRecentInstall(): Boolean = withContext(dispatchers.io()) {
+    @OnIo
+    override suspend fun isRecentInstall(): Boolean {
         val maxInstalledDays = dataStore.getMaximumPermittedDaysSinceInstallation()
         val daysSinceInstall = userBrowserProperties.daysSinceInstalled()
 
-        return@withContext daysSinceInstall <= maxInstalledDays
+        return daysSinceInstall <= maxInstalledDays
     }
 }

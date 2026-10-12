@@ -20,13 +20,13 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.SystemClock
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.ActivityScope
 import com.duckduckgo.mobile.android.vpn.bugreport.NetworkTypeMonitor.Companion
 import com.duckduckgo.mobile.android.vpn.state.VpnStateCollectorPlugin
 import com.frybits.harmony.getHarmonySharedPreferences
 import com.squareup.anvil.annotations.ContributesMultibinding
 import com.squareup.moshi.Moshi
-import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -42,8 +42,9 @@ class NetworkTypeCollector @Inject constructor(
 
     override val collectorName = "networkInfo"
 
-    override suspend fun collectVpnRelatedState(appPackageId: String?): JSONObject = withContext(dispatcherProvider.io()) {
-        return@withContext getNetworkInfoJsonObject()
+    @OnIo
+    override suspend fun collectVpnRelatedState(appPackageId: String?): JSONObject {
+        return getNetworkInfoJsonObject()
     }
 
     private fun getNetworkInfoJsonObject(): JSONObject {

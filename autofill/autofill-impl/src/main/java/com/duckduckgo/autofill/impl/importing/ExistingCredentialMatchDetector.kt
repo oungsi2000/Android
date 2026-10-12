@@ -19,10 +19,10 @@ package com.duckduckgo.autofill.impl.importing
 import com.duckduckgo.autofill.api.domain.app.LoginCredentials
 import com.duckduckgo.autofill.impl.store.InternalAutofillStore
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface ExistingCredentialMatchDetector {
@@ -35,20 +35,19 @@ class DefaultExistingCredentialMatchDetector @Inject constructor(
     private val dispatchers: DispatcherProvider,
 ) : ExistingCredentialMatchDetector {
 
+    @OnIo
     override suspend fun filterExistingCredentials(newCredentials: List<LoginCredentials>): List<LoginCredentials> {
-        return withContext(dispatchers.io()) {
-            val existingCredentials = autofillStore.getAllCredentials().firstOrNull() ?: return@withContext newCredentials
+        val existingCredentials = autofillStore.getAllCredentials().firstOrNull() ?: return newCredentials
 
-            // Filter new credentials to exclude those already in the database
-            newCredentials.filter { newCredential ->
+        // Filter new credentials to exclude those already in the database
+        return newCredentials.filter { newCredential ->
 
-                existingCredentials.none { existingCredential ->
-                    existingCredential.domain == newCredential.domain &&
-                        existingCredential.username == newCredential.username &&
-                        existingCredential.password == newCredential.password &&
-                        existingCredential.domainTitle == newCredential.domainTitle &&
-                        existingCredential.notes == newCredential.notes
-                }
+            existingCredentials.none { existingCredential ->
+                existingCredential.domain == newCredential.domain &&
+                    existingCredential.username == newCredential.username &&
+                    existingCredential.password == newCredential.password &&
+                    existingCredential.domainTitle == newCredential.domainTitle &&
+                    existingCredential.notes == newCredential.notes
             }
         }
     }

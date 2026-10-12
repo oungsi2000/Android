@@ -22,9 +22,9 @@ import com.duckduckgo.app.statistics.pixels.Pixel
 import com.duckduckgo.autofill.impl.importing.takeout.zip.TakeoutBookmarkExtractor.ExtractionResult
 import com.duckduckgo.autofill.impl.pixel.AutofillPixelNames.BOOKMARK_IMPORT_FROM_GOOGLE_FLOW_EXTRA_CHROME_EXPORT
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.WARN
 import logcat.logcat
 import java.io.File
@@ -59,16 +59,16 @@ class TakeoutZipBookmarkExtractor @Inject constructor(
     private val dispatchers: DispatcherProvider,
     private val pixel: Pixel,
 ) : TakeoutBookmarkExtractor {
-    override suspend fun extractBookmarksFromFile(takeoutZipUri: Uri): ExtractionResult =
-        withContext(dispatchers.io()) {
-            runCatching {
-                context.contentResolver.openInputStream(takeoutZipUri)?.use { inputStream ->
-                    ZipInputStream(inputStream).use { zipInputStream ->
-                        extractFromZipStreamToTempFile(zipInputStream, takeoutZipUri)
-                    }
-                } ?: ExtractionResult.Error(Exception("Unable to open file: $takeoutZipUri"))
-            }.getOrElse { ExtractionResult.Error(Exception(it)) }
-        }
+    @OnIo
+    override suspend fun extractBookmarksFromFile(takeoutZipUri: Uri): ExtractionResult {
+        return runCatching {
+            context.contentResolver.openInputStream(takeoutZipUri)?.use { inputStream ->
+                ZipInputStream(inputStream).use { zipInputStream ->
+                    extractFromZipStreamToTempFile(zipInputStream, takeoutZipUri)
+                }
+            } ?: ExtractionResult.Error(Exception("Unable to open file: $takeoutZipUri"))
+        }.getOrElse { ExtractionResult.Error(Exception(it)) }
+    }
 
     private fun extractFromZipStreamToTempFile(zipInputStream: ZipInputStream, takeoutZipUri: Uri): ExtractionResult {
         var entry = zipInputStream.nextEntry

@@ -71,6 +71,7 @@ import com.duckduckgo.common.ui.view.button.DaxButton
 import com.duckduckgo.common.ui.view.prependIconToText
 import com.duckduckgo.common.utils.DispatcherProvider
 import com.duckduckgo.common.utils.FragmentViewModelFactory
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.extractDomain
 import com.duckduckgo.di.scopes.FragmentScope
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -84,7 +85,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.VERBOSE
 import logcat.logcat
 import javax.inject.Inject
@@ -329,13 +329,12 @@ class AutofillSavingCredentialsDialogFragment : BottomSheetDialogFragment(), Cre
         }
     }
 
+    @OnIo
     private suspend fun paramsForPixel(): Map<String, String> {
-        return withContext(dispatcherProvider.io()) {
-            if (autofillFeature.partialFormSaves().isEnabled()) {
-                mapOf(PIXEL_PARAM_WAS_USERNAME_BACKFILLED to wasUsernameBackFilled.await().toString())
-            } else {
-                emptyMap()
-            }
+        return if (autofillFeature.partialFormSaves().isEnabled()) {
+            mapOf(PIXEL_PARAM_WAS_USERNAME_BACKFILLED to wasUsernameBackFilled.await().toString())
+        } else {
+            emptyMap()
         }
     }
 

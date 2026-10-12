@@ -17,11 +17,11 @@
 package com.duckduckgo.contentscopescripts.impl
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.contentscopescripts.api.ContentScopeOptimizations
 import com.duckduckgo.contentscopescripts.api.ContentScopeOptimizations.State
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @ContributesBinding(AppScope::class)
@@ -30,8 +30,9 @@ class RealContentScopeOptimizations @Inject constructor(
     private val dispatcherProvider: DispatcherProvider,
 ) : ContentScopeOptimizations {
 
-    override suspend fun current(): State = withContext(dispatcherProvider.io()) {
-        State(
+    @OnIo
+    override suspend fun current(): State {
+        return State(
             injectionOptimized = contentScopeScriptsFeature.optimizeContentScopeInjection().isEnabled(),
             messagingOptimized = contentScopeScriptsFeature.optimizeContentScopeMessaging().isEnabled(),
             experimentsCached = contentScopeScriptsFeature.cacheContentScopeExperiments().isEnabled(),

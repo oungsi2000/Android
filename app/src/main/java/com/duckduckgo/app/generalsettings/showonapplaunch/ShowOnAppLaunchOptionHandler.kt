@@ -29,13 +29,13 @@ import com.duckduckgo.browser.api.wideevents.BrowserInteractionsPlugin
 import com.duckduckgo.browsermode.api.BrowserMode
 import com.duckduckgo.browsermode.api.BrowserModeDataProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.isHttpOrHttps
 import com.duckduckgo.common.utils.plugins.PluginPoint
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.newtabpage.api.NtpAfterIdleManager
 import com.squareup.anvil.annotations.ContributesBinding
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import javax.inject.Inject
 
@@ -149,15 +149,14 @@ class ShowOnAppLaunchOptionHandlerImpl @Inject constructor(
         )
     }
 
+    @OnIo
     override suspend fun handleResolvedUrlStorage(
         currentUrl: String?,
         isRootOfTab: Boolean,
         tabId: String,
     ) {
-        withContext(dispatchers.io()) {
-            if (currentUrl != null && isRootOfTab && tabId == showOnAppLaunchOptionDataStore.showOnAppLaunchTabId) {
-                showOnAppLaunchOptionDataStore.setResolvedPageUrl(currentUrl)
-            }
+        if (currentUrl != null && isRootOfTab && tabId == showOnAppLaunchOptionDataStore.showOnAppLaunchTabId) {
+            showOnAppLaunchOptionDataStore.setResolvedPageUrl(currentUrl)
         }
     }
 

@@ -16,6 +16,7 @@
 
 package com.duckduckgo.autofill.impl.service.mapper
 
+import com.duckduckgo.common.utils.LogFailure
 import androidx.lifecycle.LifecycleOwner
 import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
@@ -68,9 +69,7 @@ class RemoteDomainTargetAppDataDownloader @Inject constructor(
                     autofillPrefsStore.domainTargetDatasetVersion = this.version
                 }
             }
-        }.onFailure {
-            logcat(ERROR) { "Autofill-mapping: Dataset download failed: ${it.asLog()}" }
-        }
+        }.onFailure @LogFailure("Autofill-mapping: Dataset download failed: ", priority = ERROR) {}
     }
 
     private fun persistData(dataset: RemoteDomainTargetDataSet) {

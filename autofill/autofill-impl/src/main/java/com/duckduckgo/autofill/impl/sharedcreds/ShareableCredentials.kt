@@ -23,6 +23,7 @@ import com.duckduckgo.autofill.impl.store.InternalAutofillStore
 import com.duckduckgo.autofill.impl.urlmatcher.AutofillUrlMatcher
 import com.duckduckgo.autofill.impl.urlmatcher.AutofillUrlMatcher.ExtractedUrlParts
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
@@ -30,7 +31,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart.LAZY
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface ShareableCredentials {
@@ -52,12 +52,11 @@ class AppleShareableCredentials @Inject constructor(
         jsonParser.read()
     }
 
+    @OnIo
     override suspend fun shareableCredentials(sourceUrl: String): List<LoginCredentials> {
-        return withContext(dispatchers.io()) {
-            val config = sharedCredentialConfig.await()
-            val shareableUrls = shareableCredentialsUrlGenerator.generateShareableUrls(sourceUrl, config)
-            return@withContext matchingCredentials(shareableUrls)
-        }
+        val config = sharedCredentialConfig.await()
+        val shareableUrls = shareableCredentialsUrlGenerator.generateShareableUrls(sourceUrl, config)
+        return matchingCredentials(shareableUrls)
     }
 
     private suspend fun matchingCredentials(

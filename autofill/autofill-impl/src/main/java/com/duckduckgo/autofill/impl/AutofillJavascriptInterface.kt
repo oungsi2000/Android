@@ -69,6 +69,7 @@ import com.duckduckgo.browsermode.api.BrowserMode
 import com.duckduckgo.common.utils.ConflatedJob
 import com.duckduckgo.common.utils.DefaultDispatcherProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import kotlinx.coroutines.CoroutineScope
@@ -459,32 +460,31 @@ class AutofillStoredBackJavascriptInterface @Inject constructor(
         return existingCredentials.username != credentials.username || existingCredentials.password != credentials.password
     }
 
+    @OnIo
     private suspend fun updateCredentialsIfPasswordMissing(
         originalUrl: String,
         username: String?,
         password: String,
     ): Boolean {
-        return withContext(dispatcherProvider.io()) {
-            var updateMade = false
+        var updateMade = false
 
-            autofillStore.getCredentials(originalUrl)
-                .filter { it.username != null }
-                .filter { it.username == username }
-                .filter { it.password.isNullOrEmpty() }
-                .also { list ->
-                    logcat(VERBOSE) {
-                        "Found ${list.size} credentials with missing password for username=$username and url=$originalUrl"
-                    }
+        autofillStore.getCredentials(originalUrl)
+            .filter { it.username != null }
+            .filter { it.username == username }
+            .filter { it.password.isNullOrEmpty() }
+            .also { list ->
+                logcat(VERBOSE) {
+                    "Found ${list.size} credentials with missing password for username=$username and url=$originalUrl"
                 }
-                .map { it.copy(password = password) }
-                .forEach {
-                    if (autofillStore.updateCredentials(originalUrl, it, CredentialUpdateType.Password) != null) {
-                        updateMade = true
-                    }
+            }
+            .map { it.copy(password = password) }
+            .forEach {
+                if (autofillStore.updateCredentials(originalUrl, it, CredentialUpdateType.Password) != null) {
+                    updateMade = true
                 }
+            }
 
-            updateMade
-        }
+        return updateMade
     }
 
     private fun AutofillStoreFormDataRequest?.isValid(): Boolean {

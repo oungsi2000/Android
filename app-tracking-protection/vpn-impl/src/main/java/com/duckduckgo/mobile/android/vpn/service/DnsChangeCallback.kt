@@ -16,6 +16,7 @@
 
 package com.duckduckgo.mobile.android.vpn.service
 
+import com.duckduckgo.common.utils.LogFailure
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.ConnectivityManager.NetworkCallback
@@ -77,9 +78,7 @@ class DnsChangeCallback @Inject constructor(
             }.build()
             connectivityManager?.registerNetworkCallback(request, this)
             registered = true
-        }.onFailure {
-            logcat(ERROR) { it.asLog() }
-        }
+        }.onFailure @LogFailure(priority = ERROR) {}
     }
 
     internal fun unregister() {

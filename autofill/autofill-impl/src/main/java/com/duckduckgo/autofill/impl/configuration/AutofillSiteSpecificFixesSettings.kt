@@ -18,12 +18,12 @@ package com.duckduckgo.autofill.impl.configuration
 
 import com.duckduckgo.autofill.api.AutofillFeature
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import javax.inject.Inject
 
@@ -48,29 +48,28 @@ class AutofillSiteSpecificFixesSettingsImpl @Inject constructor(
         moshi.adapter(JSONObject::class.java)
     }
 
+    @OnIo
     override suspend fun getConfig(): AutofillSiteSpecificFixesSettings {
-        return withContext(dispatchers.io()) {
-            val isSiteSpecificFixesEnabled = autofillFeature.siteSpecificFixes().isEnabled()
-            val settings = if (isSiteSpecificFixesEnabled) {
-                autofillFeature.siteSpecificFixes().getSettings()?.let {
-                    runCatching {
-                        jsonAdapter.fromJson(it)
-                    }.getOrNull()
-                }
-            } else {
-                null
+        val isSiteSpecificFixesEnabled = autofillFeature.siteSpecificFixes().isEnabled()
+        val settings = if (isSiteSpecificFixesEnabled) {
+            autofillFeature.siteSpecificFixes().getSettings()?.let {
+                runCatching {
+                    jsonAdapter.fromJson(it)
+                }.getOrNull()
             }
-
-            val settingsJson = if (isSiteSpecificFixesEnabled && settings != null) {
-                settings.toString()
-            } else {
-                JAVASCRIPT_CONFIG_DEFAULT
-            }
-            AutofillSiteSpecificFixesSettings(
-                javascriptConfigSiteSpecificFixes = settingsJson,
-                canApplySiteSpecificFixes = isSiteSpecificFixesEnabled,
-            )
+        } else {
+            null
         }
+
+        val settingsJson = if (isSiteSpecificFixesEnabled && settings != null) {
+            settings.toString()
+        } else {
+            JAVASCRIPT_CONFIG_DEFAULT
+        }
+        return AutofillSiteSpecificFixesSettings(
+            javascriptConfigSiteSpecificFixes = settingsJson,
+            canApplySiteSpecificFixes = isSiteSpecificFixesEnabled,
+        )
     }
 
     companion object {

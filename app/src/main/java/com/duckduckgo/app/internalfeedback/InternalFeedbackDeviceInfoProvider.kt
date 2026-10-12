@@ -29,6 +29,7 @@ import com.duckduckgo.appbuildconfig.api.BuildFlavor
 import com.duckduckgo.autofill.api.InternalTestUserChecker
 import com.duckduckgo.browser.api.WebViewVersionProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.device.DeviceInfo
 import com.duckduckgo.common.utils.device.DeviceInfo.FormFactor
 import com.duckduckgo.common.utils.extensions.toSanitizedLanguageTag
@@ -38,7 +39,6 @@ import com.duckduckgo.feature.toggles.api.FeatureTogglesInventory
 import com.duckduckgo.networkprotection.api.NetworkProtectionState
 import com.duckduckgo.privacy.config.api.PrivacyConfig
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import javax.inject.Inject
@@ -69,8 +69,9 @@ class RealInternalFeedbackDeviceInfoProvider @Inject constructor(
     private val dispatcherProvider: DispatcherProvider,
 ) : InternalFeedbackDeviceInfoProvider {
 
-    override suspend fun getDeviceInfo(): Result<JSONObject> = withContext(dispatcherProvider.io()) {
-        runCatching {
+    @OnIo
+    override suspend fun getDeviceInfo(): Result<JSONObject> {
+        return runCatching {
             JSONObject()
                 .put("platform", "android")
                 .put("appVersion", appBuildConfig.versionName)

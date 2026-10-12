@@ -21,10 +21,10 @@ import com.duckduckgo.app.onboarding.SegmentedOnboardingFeatureToggles.Cohorts
 import com.duckduckgo.app.onboardingbranddesignupdate.OnboardingBrandDesignUpdateToggles
 import com.duckduckgo.appbuildconfig.api.AppBuildConfig
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface SegmentedOnboardingExperimentManager {
@@ -47,14 +47,15 @@ class SegmentedOnboardingExperimentManagerImpl @Inject constructor(
     private val onboardingPrivacyConfigPersistedGate: OnboardingPrivacyConfigPersistedGate,
 ) : SegmentedOnboardingExperimentManager {
 
-    override suspend fun enroll(): SegmentedOnboardingExperimentVariant? = withContext(dispatcherProvider.io()) {
+    @OnIo
+    override suspend fun enroll(): SegmentedOnboardingExperimentVariant? {
         if (!onboardingPrivacyConfigPersistedGate.awaitPersisted() || !checkPrerequisites()) {
-            return@withContext null
+            return null
         }
 
         val toggle = segmentedOnboardingFeatureToggles.onboardingFlowByDownloadReasonExperiment()
         toggle.enroll()
-        when {
+        return when {
             toggle.isEnrolledAndEnabled(Cohorts.TREATMENT) -> SegmentedOnboardingExperimentVariant.TREATMENT
             toggle.isEnrolledAndEnabled(Cohorts.CONTROL) -> SegmentedOnboardingExperimentVariant.CONTROL
             else -> null

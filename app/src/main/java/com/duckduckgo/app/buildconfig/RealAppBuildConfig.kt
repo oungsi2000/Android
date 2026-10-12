@@ -25,12 +25,12 @@ import com.duckduckgo.appbuildconfig.api.AppBuildConfig
 import com.duckduckgo.appbuildconfig.api.BuildFlavor
 import com.duckduckgo.appbuildconfig.api.isInternalBuild
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.data.store.api.SharedPreferencesProvider
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.experiments.api.VariantManager
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.Lazy
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
 import logcat.LogPriority.INFO
 import logcat.LogPriority.WARN
@@ -94,14 +94,15 @@ class RealAppBuildConfig @Inject constructor(
     override val variantName: String?
         get() = variantManager.get().getVariantKey()
 
-    override suspend fun isAppReinstall(): Boolean = withContext(dispatcherProvider.io()) {
-        return@withContext kotlin.runCatching {
+    @OnIo
+    override suspend fun isAppReinstall(): Boolean {
+        return kotlin.runCatching {
             if (sdkInt < 30) {
-                return@withContext false
+                return false
             }
 
             if (preferences.contains(APP_REINSTALLED_KEY)) {
-                return@withContext preferences.getBoolean(APP_REINSTALLED_KEY, false)
+                return preferences.getBoolean(APP_REINSTALLED_KEY, false)
             }
 
             val downloadDirectory = getDownloadsDirectory()
@@ -114,7 +115,7 @@ class RealAppBuildConfig @Inject constructor(
                 true
             }
             preferences.edit(commit = true) { putBoolean(APP_REINSTALLED_KEY, appReinstallValue) }
-            return@withContext appReinstallValue
+            return appReinstallValue
         }.getOrDefault(false)
     }
 

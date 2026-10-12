@@ -21,6 +21,7 @@ import com.duckduckgo.app.statistics.wideevents.FlowStatus
 import com.duckduckgo.app.statistics.wideevents.WideEventClient
 import com.duckduckgo.common.utils.CurrentTimeProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.subscriptions.impl.SubscriptionsFeature
 import com.duckduckgo.subscriptions.impl.pixels.SubscriptionPixelSender
@@ -29,7 +30,6 @@ import com.duckduckgo.subscriptions.impl.repository.Subscription
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.Lazy
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.days
@@ -185,8 +185,9 @@ class FreeTrialConversionWideEventImpl @Inject constructor(
         }
     }
 
-    private suspend fun isFeatureEnabled(): Boolean = withContext(dispatchers.io()) {
-        subscriptionsFeature.get().sendFreeTrialConversionWideEvent().isEnabled()
+    @OnIo
+    private suspend fun isFeatureEnabled(): Boolean {
+        return subscriptionsFeature.get().sendFreeTrialConversionWideEvent().isEnabled()
     }
 
     private suspend fun getCurrentWideEventId(): Long? {

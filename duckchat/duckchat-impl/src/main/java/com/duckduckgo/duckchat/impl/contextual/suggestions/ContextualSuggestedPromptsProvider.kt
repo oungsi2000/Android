@@ -18,13 +18,13 @@ package com.duckduckgo.duckchat.impl.contextual.suggestions
 
 import android.content.Context
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.duckchat.impl.R
 import com.duckduckgo.duckchat.impl.pixel.DuckChatPixels
 import com.squareup.anvil.annotations.ContributesBinding
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
 import logcat.logcat
 import javax.inject.Inject
@@ -51,31 +51,33 @@ class RealContextualSuggestedPromptsProvider @Inject constructor(
 
     private val bundledCatalog: SuggestionCatalog? by lazy { loadBundledCatalog() }
 
+    @OnIo
     override suspend fun resolveSuggestions(
         input: ResolvePageSuggestionsInput,
-    ): ResolvedPageSuggestions = withContext(dispatcherProvider.io()) {
+    ): ResolvedPageSuggestions {
         val catalog = bundledCatalog
         if (catalog == null) {
             duckChatPixels.reportContextualSuggestionsCatalogLoadFailed()
-            return@withContext ResolvedPageSuggestions(
+            return ResolvedPageSuggestions(
                 suggestions = emptyList(),
                 isSmart = false,
                 pageType = ContextualSuggestionsMatcher.classifyPageType(input.pageTypeSignals),
             )
         }
         val resolved = ContextualSuggestionsMatcher.resolve(input, catalog)
-        resolved.copy(
+        return resolved.copy(
             suggestions = resolved.suggestions
                 .filterNot { it.id == SUGGESTION_ID_SUMMARIZE_PAGE }
                 .map { localize(it, input) },
         )
     }
 
+    @OnIo
     override suspend fun resolveTextSelectionSuggestions(
         input: ResolvePageSuggestionsInput,
-    ): List<ContextualSuggestedPrompt> = withContext(dispatcherProvider.io()) {
-        val catalog = bundledCatalog ?: return@withContext emptyList()
-        ContextualSuggestionsMatcher.resolveIds(TEXT_SELECTION_SUGGESTION_IDS, input, catalog)
+    ): List<ContextualSuggestedPrompt> {
+        val catalog = bundledCatalog ?: return emptyList()
+        return ContextualSuggestionsMatcher.resolveIds(TEXT_SELECTION_SUGGESTION_IDS, input, catalog)
             .map { localize(it, input) }
     }
 
@@ -90,13 +92,15 @@ class RealContextualSuggestedPromptsProvider @Inject constructor(
         )
     }
 
-    override suspend fun maxSuggestedPrompts(): Int = withContext(dispatcherProvider.io()) {
-        bundledCatalog?.maxSuggestedPrompts ?: 1
+    @OnIo
+    override suspend fun maxSuggestedPrompts(): Int {
+        return bundledCatalog?.maxSuggestedPrompts ?: 1
     }
 
-    override suspend fun prioritySuggestionIds(): Set<String> = withContext(dispatcherProvider.io()) {
-        val catalog = bundledCatalog ?: return@withContext emptySet()
-        catalog.defaults.filter { catalog.catalog[it]?.condition != null }.toSet()
+    @OnIo
+    override suspend fun prioritySuggestionIds(): Set<String> {
+        val catalog = bundledCatalog ?: return emptySet()
+        return catalog.defaults.filter { catalog.catalog[it]?.condition != null }.toSet()
     }
 
     private fun loadBundledCatalog(): SuggestionCatalog? {

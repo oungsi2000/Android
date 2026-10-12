@@ -20,6 +20,7 @@ import com.duckduckgo.app.statistics.wideevents.CleanupPolicy
 import com.duckduckgo.app.statistics.wideevents.FlowStatus
 import com.duckduckgo.app.statistics.wideevents.WideEventClient
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.pir.impl.PirRemoteFeatures
 import com.duckduckgo.pir.impl.common.BrokerStepsParser
@@ -196,14 +197,13 @@ class PirInitialScanCompletionWideEventImpl @Inject constructor(
         }
     }
 
+    @OnIo
     override suspend fun onUserReset() {
-        withContext(dispatchers.io()) {
-            mutex.withLock {
-                val flowId = pirDataStore.initialScanCompletionFlowId
-                if (flowId == 0L) return@withLock
+        mutex.withLock {
+            val flowId = pirDataStore.initialScanCompletionFlowId
+            if (flowId == 0L) return@withLock
 
-                wideEventClient.flowAbort(flowId)
-            }
+            wideEventClient.flowAbort(flowId)
         }
     }
 
@@ -213,8 +213,9 @@ class PirInitialScanCompletionWideEventImpl @Inject constructor(
             if (brokerStepsParser.parseStep(broker, stepsJson).isNotEmpty()) broker.name else null
         }
 
-    private suspend fun isFeatureEnabled(): Boolean = withContext(dispatchers.io()) {
-        pirRemoteFeatures.sendScanWideEvent().isEnabled()
+    @OnIo
+    private suspend fun isFeatureEnabled(): Boolean {
+        return pirRemoteFeatures.sendScanWideEvent().isEnabled()
     }
 
     private fun Boolean.toVpnConnectionState(): String = if (this) "connected" else "disconnected"

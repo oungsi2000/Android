@@ -18,9 +18,9 @@ package com.duckduckgo.pir.impl.brokers
 
 import android.content.Context
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
 import logcat.logcat
 import okio.source
@@ -41,27 +41,26 @@ class RealBundledBrokerDataLoader @Inject constructor(
     private val brokerJsonProcessor: BrokerJsonProcessor,
 ) : BundledBrokerDataLoader {
 
+    @OnIo
     override suspend fun loadBundledBrokerData() {
-        withContext(dispatcherProvider.io()) {
-            logcat { "PIR-update: Loading bundled broker data as fallback" }
+        logcat { "PIR-update: Loading bundled broker data as fallback" }
 
-            val bundledFileNames = runCatching { context.assets.list(BROKERS_ASSET_DIR)?.toList() }
-                .getOrNull()
-                .orEmpty()
-                .filter { it.endsWith(".json") }
+        val bundledFileNames = runCatching { context.assets.list(BROKERS_ASSET_DIR)?.toList() }
+            .getOrNull()
+            .orEmpty()
+            .filter { it.endsWith(".json") }
 
-            if (bundledFileNames.isEmpty()) {
-                logcat(ERROR) { "PIR-update: No bundled broker assets found" }
-                return@withContext
-            }
+        if (bundledFileNames.isEmpty()) {
+            logcat(ERROR) { "PIR-update: No bundled broker assets found" }
+            return
+        }
 
-            for (fileName in bundledFileNames) {
-                val source = runCatching { context.assets.open("$BROKERS_ASSET_DIR/$fileName").source() }
-                    .onFailure { logcat(ERROR) { "PIR-update: Failed to read bundled asset $fileName: $it" } }
-                    .getOrNull() ?: continue
+        for (fileName in bundledFileNames) {
+            val source = runCatching { context.assets.open("$BROKERS_ASSET_DIR/$fileName").source() }
+                .onFailure { logcat(ERROR) { "PIR-update: Failed to read bundled asset $fileName: $it" } }
+                .getOrNull() ?: continue
 
-                brokerJsonProcessor.processAndStoreBroker(fileName, source)
-            }
+            brokerJsonProcessor.processAndStoreBroker(fileName, source)
         }
     }
 

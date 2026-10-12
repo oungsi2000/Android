@@ -20,6 +20,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.duckduckgo.anvil.annotations.ContributesViewModel
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.formatters.time.TimeDiffFormatter
 import com.duckduckgo.di.scopes.ActivityScope
 import com.duckduckgo.mobile.android.vpn.apps.TrackingProtectionAppsRepository
@@ -58,19 +59,18 @@ class AppTPCompanyTrackersViewModel @Inject constructor(
         return viewStateFlow
     }
 
+    @OnIo
     suspend fun loadData(
         date: String,
         packageName: String,
     ) {
-        withContext(dispatchers.io()) {
-            statsRepository
-                .getTrackersForAppFromDate(date, packageName)
-                .map { aggregateDataPerApp(it, packageName) }
-                .flowOn(dispatchers.io())
-                .collectLatest { state ->
-                    viewStateFlow.emit(state)
-                }
-        }
+        statsRepository
+            .getTrackersForAppFromDate(date, packageName)
+            .map { aggregateDataPerApp(it, packageName) }
+            .flowOn(dispatchers.io())
+            .collectLatest { state ->
+                viewStateFlow.emit(state)
+            }
     }
 
     private suspend fun aggregateDataPerApp(

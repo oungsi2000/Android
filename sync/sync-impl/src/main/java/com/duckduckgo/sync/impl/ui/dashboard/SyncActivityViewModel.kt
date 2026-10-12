@@ -25,6 +25,7 @@ import com.duckduckgo.app.clipboard.ClipboardInteractor
 import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.common.utils.ConflatedJob
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.ActivityScope
 import com.duckduckgo.settings.api.SettingsPageFeature
 import com.duckduckgo.sync.api.SyncAutoRestore
@@ -200,13 +201,12 @@ class SyncActivityViewModel @Inject constructor(
         }
     }
 
+    @OnIo
     private suspend fun initViewStateThisDeviceState() {
-        withContext(dispatchers.io()) {
-            if (!syncAccountRepository.isSignedIn()) {
-                viewState.update { signedOutState() }
-            } else {
-                updateSignedInState()
-            }
+        if (!syncAccountRepository.isSignedIn()) {
+            viewState.update { signedOutState() }
+        } else {
+            updateSignedInState()
         }
     }
 

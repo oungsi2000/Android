@@ -23,6 +23,7 @@ import com.duckduckgo.app.statistics.wideevents.FlowStatus
 import com.duckduckgo.app.statistics.wideevents.WideEventClient
 import com.duckduckgo.common.utils.CurrentTimeProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.pir.impl.PirRemoteFeatures
 import com.duckduckgo.pir.impl.checker.DisabledReason
@@ -31,7 +32,6 @@ import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import java.io.IOException
 import javax.inject.Inject
 import kotlin.random.Random
@@ -282,12 +282,14 @@ class PirScanWideEventImpl @Inject constructor(
         PirExecutionType.SCHEDULED -> scheduledState
     }
 
-    private suspend fun isFeatureEnabled(): Boolean = withContext(dispatchers.io()) {
-        pirRemoteFeatures.sendScanWideEvent().isEnabled()
+    @OnIo
+    private suspend fun isFeatureEnabled(): Boolean {
+        return pirRemoteFeatures.sendScanWideEvent().isEnabled()
     }
 
-    private suspend fun schedulingMetadataValue(): String = withContext(dispatchers.io()) {
-        if (pirRemoteFeatures.workQueueScheduling().isEnabled()) SCHEDULING_QUEUE else SCHEDULING_STATIC
+    @OnIo
+    private suspend fun schedulingMetadataValue(): String {
+        return if (pirRemoteFeatures.workQueueScheduling().isEnabled()) SCHEDULING_QUEUE else SCHEDULING_STATIC
     }
 
     /**

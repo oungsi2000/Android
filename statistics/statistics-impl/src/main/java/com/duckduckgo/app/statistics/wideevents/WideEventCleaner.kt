@@ -22,11 +22,11 @@ import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
 import com.duckduckgo.app.statistics.wideevents.db.WideEventRepository
 import com.duckduckgo.common.utils.CurrentTimeProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesMultibinding
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
@@ -109,8 +109,8 @@ class WideEventCleaner @Inject constructor(
         return timeout <= Duration.between(startAt, currentTime)
     }
 
-    private suspend fun isFeatureEnabled(): Boolean =
-        withContext(dispatcherProvider.io()) {
-            wideEventFeature.self().isEnabled()
-        }
+    @OnIo
+    private suspend fun isFeatureEnabled(): Boolean {
+        return wideEventFeature.self().isEnabled()
+    }
 }

@@ -23,6 +23,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.remote.messaging.api.Content.MessageType
 import com.duckduckgo.remote.messaging.api.RemoteMessage
@@ -30,7 +31,6 @@ import com.duckduckgo.remote.messaging.impl.di.ModalSurface
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface ModalSurfaceStore {
@@ -78,47 +78,41 @@ class ModalSurfaceStoreImpl @Inject constructor(
     private val dispatchers: DispatcherProvider,
 ) : ModalSurfaceStore {
 
+    @OnIo
     override suspend fun getBackgroundedTimestamp(): Long? {
-        return withContext(dispatchers.io()) {
-            val key = getKeyBackgroundedTimestamp()
-            store.data.firstOrNull()?.get(key)
-        }
+        val key = getKeyBackgroundedTimestamp()
+        return store.data.firstOrNull()?.get(key)
     }
 
+    @OnIo
     override suspend fun clearBackgroundTimestamp() {
-        withContext(dispatchers.io()) {
-            val key = getKeyBackgroundedTimestamp()
-            store.edit { it.remove(key) }
-        }
+        val key = getKeyBackgroundedTimestamp()
+        store.edit { it.remove(key) }
     }
 
+    @OnIo
     override suspend fun recordBackgroundedTimestamp() {
-        withContext(dispatchers.io()) {
-            val key = getKeyBackgroundedTimestamp()
-            store.edit { it[key] = SystemClock.elapsedRealtime() }
-        }
+        val key = getKeyBackgroundedTimestamp()
+        store.edit { it[key] = SystemClock.elapsedRealtime() }
     }
 
+    @OnIo
     override suspend fun getLastShownRemoteMessageId(): String? {
-        return withContext(dispatchers.io()) {
-            store.data.firstOrNull()?.get(getKeyLastShownRemoteMessageId())
-        }
+        return store.data.firstOrNull()?.get(getKeyLastShownRemoteMessageId())
     }
 
+    @OnIo
     override suspend fun getLastShownRemoteMessageType(): MessageType? {
-        return withContext(dispatchers.io()) {
-            store.data.firstOrNull()?.get(getKeyLastShownRemoteMessageType())?.let {
-                runCatching { MessageType.valueOf(it) }.getOrNull()
-            }
+        return store.data.firstOrNull()?.get(getKeyLastShownRemoteMessageType())?.let {
+            runCatching { MessageType.valueOf(it) }.getOrNull()
         }
     }
 
+    @OnIo
     override suspend fun recordLastShownRemoteMessage(message: RemoteMessage) {
-        withContext(dispatchers.io()) {
-            store.edit {
-                it[getKeyLastShownRemoteMessageId()] = message.id
-                it[getKeyLastShownRemoteMessageType()] = message.content.messageType.name
-            }
+        store.edit {
+            it[getKeyLastShownRemoteMessageId()] = message.id
+            it[getKeyLastShownRemoteMessageType()] = message.content.messageType.name
         }
     }
 

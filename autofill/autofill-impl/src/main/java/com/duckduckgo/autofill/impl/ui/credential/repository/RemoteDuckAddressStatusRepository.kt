@@ -21,10 +21,10 @@ import com.duckduckgo.autofill.impl.email.service.DuckAddressStatusManagementSer
 import com.duckduckgo.autofill.impl.ui.credential.repository.DuckAddressStatusRepository.ActivationStatusResult
 import com.duckduckgo.autofill.impl.ui.credential.repository.DuckAddressStatusRepository.ActivationStatusResult.*
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.INFO
 import logcat.LogPriority.VERBOSE
 import logcat.LogPriority.WARN
@@ -72,14 +72,13 @@ class RemoteDuckAddressStatusRepository @Inject constructor(
     private val dispatchers: DispatcherProvider,
 ) : DuckAddressStatusRepository {
 
+    @OnIo
     override suspend fun getActivationStatus(privateDuckAddress: String): ActivationStatusResult {
-        return withContext(dispatchers.io()) {
-            val authToken = emailManager.getToken() ?: return@withContext NotSignedIn
-            val formattedAuthToken = "Bearer $authToken"
-            val formattedDuckAddress = privateDuckAddress.removeSuffix(DUCK_ADDRESS_SUFFIX)
+        val authToken = emailManager.getToken() ?: return NotSignedIn
+        val formattedAuthToken = "Bearer $authToken"
+        val formattedDuckAddress = privateDuckAddress.removeSuffix(DUCK_ADDRESS_SUFFIX)
 
-            return@withContext executeNetworkRequestToGetStatus(formattedAuthToken, formattedDuckAddress)
-        }
+        return executeNetworkRequestToGetStatus(formattedAuthToken, formattedDuckAddress)
     }
 
     private suspend fun executeNetworkRequestToGetStatus(
@@ -106,17 +105,16 @@ class RemoteDuckAddressStatusRepository @Inject constructor(
         }
     }
 
+    @OnIo
     override suspend fun setActivationStatus(
         privateDuckAddress: String,
         isActivated: Boolean,
     ): Boolean {
-        return withContext(dispatchers.io()) {
-            val authToken = emailManager.getToken() ?: return@withContext false
-            val formattedAuthToken = "Bearer $authToken"
-            val formattedDuckAddress = privateDuckAddress.removeSuffix(DUCK_ADDRESS_SUFFIX)
+        val authToken = emailManager.getToken() ?: return false
+        val formattedAuthToken = "Bearer $authToken"
+        val formattedDuckAddress = privateDuckAddress.removeSuffix(DUCK_ADDRESS_SUFFIX)
 
-            return@withContext executeNetworkRequestToSetStatus(formattedAuthToken, formattedDuckAddress, isActivated)
-        }
+        return executeNetworkRequestToSetStatus(formattedAuthToken, formattedDuckAddress, isActivated)
     }
 
     private suspend fun executeNetworkRequestToSetStatus(

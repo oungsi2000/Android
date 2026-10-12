@@ -20,11 +20,11 @@ import com.duckduckgo.autofill.impl.importing.CsvCredentialParser.ParseResult
 import com.duckduckgo.autofill.impl.importing.CsvCredentialParser.ParseResult.Error
 import com.duckduckgo.autofill.impl.importing.CsvCredentialParser.ParseResult.Success
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import de.siegmar.fastcsv.reader.CsvReader
 import de.siegmar.fastcsv.reader.CsvRow
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
 import logcat.LogPriority.INFO
 import logcat.LogPriority.WARN
@@ -64,34 +64,33 @@ class GooglePasswordManagerCsvCredentialParser @Inject constructor(
      * Format of the Google Password Manager CSV is:
      * name | url | username | password | note
      */
+    @OnIo
     private suspend fun convertToCredentials(csv: String): List<GoogleCsvLoginCredential> {
-        return withContext(dispatchers.io()) {
-            val lines = mutableListOf<CsvRow>()
-            val iter = CsvReader.builder().build(csv).spliterator()
-            iter.forEachRemaining { lines.add(it) }
-            logcat { "Found ${lines.size} lines in the CSV" }
+        val lines = mutableListOf<CsvRow>()
+        val iter = CsvReader.builder().build(csv).spliterator()
+        iter.forEachRemaining { lines.add(it) }
+        logcat { "Found ${lines.size} lines in the CSV" }
 
-            lines.firstOrNull().verifyExpectedFormat()
+        lines.firstOrNull().verifyExpectedFormat()
 
-            // drop the header row
-            val credentialLines = lines.drop(1)
+        // drop the header row
+        val credentialLines = lines.drop(1)
 
-            return@withContext credentialLines
-                .mapNotNull {
-                    if (it.fields.size != EXPECTED_HEADERS_ORDERED.size) {
-                        logcat(WARN) { "Line is unexpected format. Expected ${EXPECTED_HEADERS_ORDERED.size} parts, found ${it.fields.size}" }
-                        return@mapNotNull null
-                    }
-
-                    parseToCredential(
-                        title = it.getField(0).blanksToNull(),
-                        url = it.getField(1).blanksToNull(),
-                        username = it.getField(2).blanksToNull(),
-                        password = it.getField(3).blanksToNull(),
-                        notes = it.getField(4).blanksToNull(),
-                    )
+        return credentialLines
+            .mapNotNull {
+                if (it.fields.size != EXPECTED_HEADERS_ORDERED.size) {
+                    logcat(WARN) { "Line is unexpected format. Expected ${EXPECTED_HEADERS_ORDERED.size} parts, found ${it.fields.size}" }
+                    return@mapNotNull null
                 }
-        }
+
+                parseToCredential(
+                    title = it.getField(0).blanksToNull(),
+                    url = it.getField(1).blanksToNull(),
+                    username = it.getField(2).blanksToNull(),
+                    password = it.getField(3).blanksToNull(),
+                    notes = it.getField(4).blanksToNull(),
+                )
+            }
     }
 
     private fun parseToCredential(

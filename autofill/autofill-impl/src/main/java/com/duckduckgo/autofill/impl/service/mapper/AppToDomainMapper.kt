@@ -21,10 +21,10 @@ import com.duckduckgo.autofill.store.targets.DomainTargetAppEntity
 import com.duckduckgo.autofill.store.targets.TargetApp
 import com.duckduckgo.common.utils.CurrentTimeProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.normalizeScheme
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
 import logcat.logcat
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -46,20 +46,19 @@ class RealAppToDomainMapper @Inject constructor(
     private val dispatcherProvider: DispatcherProvider,
     private val currentTimeProvider: CurrentTimeProvider,
 ) : AppToDomainMapper {
+    @OnIo
     override suspend fun getAssociatedDomains(appPackage: String): List<String> {
-        return withContext(dispatcherProvider.io()) {
-            logcat { "Autofill-mapping: Getting domains for $appPackage" }
-            val fingerprints = appFingerprintProvider.getSHA256HexadecimalFingerprint(appPackage)
-            if (fingerprints.isNotEmpty()) {
-                attemptToGetFromDataset(appPackage, fingerprints).run {
-                    this.ifEmpty {
-                        attemptToGetFromAssetLinks(appPackage, fingerprints)
-                    }
+        logcat { "Autofill-mapping: Getting domains for $appPackage" }
+        val fingerprints = appFingerprintProvider.getSHA256HexadecimalFingerprint(appPackage)
+        return if (fingerprints.isNotEmpty()) {
+            attemptToGetFromDataset(appPackage, fingerprints).run {
+                this.ifEmpty {
+                    attemptToGetFromAssetLinks(appPackage, fingerprints)
                 }
-            } else {
-                emptyList()
-            }.distinct()
-        }
+            }
+        } else {
+            emptyList()
+        }.distinct()
     }
 
     private fun attemptToGetFromDataset(

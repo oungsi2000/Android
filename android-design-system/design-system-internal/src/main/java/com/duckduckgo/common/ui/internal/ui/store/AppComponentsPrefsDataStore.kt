@@ -27,10 +27,10 @@ import com.duckduckgo.common.ui.DuckDuckGoTheme
 import com.duckduckgo.common.ui.isInNightMode
 import com.duckduckgo.common.ui.store.ThemingSharedPreferences
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
 
 internal val Context.appComponentsDataStore: DataStore<Preferences> by preferencesDataStore(
     name = "com.duckduckgo.app.dev_settings_activity.theme_settings",
@@ -55,12 +55,11 @@ class AppComponentsPrefsDataStore(
         )
     }.flowOn(dispatcherProvider.io())
 
+    @OnIo
     suspend fun setTheme(theme: DuckDuckGoTheme) {
-        withContext(dispatcherProvider.io()) {
-            store.edit { preferences ->
-                preferences[stringPreferencesKey(KEY_SELECTED_THEME)] =
-                    themePrefMapper.prefValue(theme)
-            }
+        store.edit { preferences ->
+            preferences[stringPreferencesKey(KEY_SELECTED_THEME)] =
+                themePrefMapper.prefValue(theme)
         }
     }
 
@@ -68,11 +67,10 @@ class AppComponentsPrefsDataStore(
         preferences[booleanPreferencesKey(KEY_BRAND_DESIGN_UPDATE)] ?: false
     }.flowOn(dispatcherProvider.io())
 
+    @OnIo
     suspend fun setBrandDesignUpdate(enabled: Boolean) {
-        withContext(dispatcherProvider.io()) {
-            store.edit { preferences ->
-                preferences[booleanPreferencesKey(KEY_BRAND_DESIGN_UPDATE)] = enabled
-            }
+        store.edit { preferences ->
+            preferences[booleanPreferencesKey(KEY_BRAND_DESIGN_UPDATE)] = enabled
         }
     }
 

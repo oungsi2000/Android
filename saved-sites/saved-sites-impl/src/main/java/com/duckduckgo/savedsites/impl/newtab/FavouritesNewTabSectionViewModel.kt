@@ -16,6 +16,7 @@
 
 package com.duckduckgo.savedsites.impl.newtab
 
+import com.duckduckgo.savedsites.impl.FireSavedSitesPixel
 import android.annotation.SuppressLint
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -23,6 +24,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.duckduckgo.anvil.annotations.ContributesViewModel
 import com.duckduckgo.app.browser.favicon.FaviconManager
+import com.duckduckgo.app.statistics.pixels.HasPixel
 import com.duckduckgo.app.statistics.pixels.Pixel
 import com.duckduckgo.app.statistics.pixels.Pixel.PixelType.Daily
 import com.duckduckgo.common.utils.DispatcherProvider
@@ -66,12 +68,12 @@ import kotlin.math.abs
 class FavouritesNewTabSectionViewModel @Inject constructor(
     private val dispatchers: DispatcherProvider,
     private val savedSitesRepository: SavedSitesRepository,
-    private val pixel: Pixel,
+    override val pixel: Pixel,
     private val faviconManager: FaviconManager,
     private val syncEngine: SyncEngine,
     private val feature: FavouritesNewTabSectionFixFeature,
     private val hatchInteractionsPlugins: PluginPoint<HatchInteractionsPlugin>,
-) : ViewModel(), DefaultLifecycleObserver {
+) : ViewModel(), DefaultLifecycleObserver, HasPixel {
 
     data class ViewState(val favourites: List<Favorite> = emptyList())
 
@@ -259,17 +261,14 @@ class FavouritesNewTabSectionViewModel @Inject constructor(
         }
     }
 
-    fun onTooltipPressed() {
-        pixel.fire(FAVOURITES_TOOLTIP_PRESSED)
-    }
+    @FireSavedSitesPixel(FAVOURITES_TOOLTIP_PRESSED)
+    fun onTooltipPressed() {}
 
-    fun onListExpanded() {
-        pixel.fire(FAVOURITES_LIST_EXPANDED)
-    }
+    @FireSavedSitesPixel(FAVOURITES_LIST_EXPANDED)
+    fun onListExpanded() {}
 
-    fun onListCollapsed() {
-        pixel.fire(FAVOURITES_LIST_COLLAPSED)
-    }
+    @FireSavedSitesPixel(FAVOURITES_LIST_COLLAPSED)
+    fun onListCollapsed() {}
 
     fun onFavouriteEdited(favorite: Favorite) {
         viewModelScope.launch(dispatchers.io()) {
@@ -291,14 +290,12 @@ class FavouritesNewTabSectionViewModel @Inject constructor(
         onDeleteSavedSiteRequested(savedSite)
     }
 
-    fun onFavoriteAdded() {
-        pixel.fire(EDIT_BOOKMARK_ADD_FAVORITE_TOGGLED)
-        pixel.fire(EDIT_BOOKMARK_ADD_FAVORITE_TOGGLED_DAILY, type = Daily())
-    }
+    @FireSavedSitesPixel(EDIT_BOOKMARK_ADD_FAVORITE_TOGGLED)
+    @FireSavedSitesPixel(EDIT_BOOKMARK_ADD_FAVORITE_TOGGLED_DAILY, daily = true)
+    fun onFavoriteAdded() {}
 
-    fun onFavoriteRemoved() {
-        pixel.fire(EDIT_BOOKMARK_REMOVE_FAVORITE_TOGGLED)
-    }
+    @FireSavedSitesPixel(EDIT_BOOKMARK_REMOVE_FAVORITE_TOGGLED)
+    fun onFavoriteRemoved() {}
 
     fun onFavoriteClicked(placement: FavoritesPlacement) {
         pixel.fire(formatPixelWithPlacement(FAVOURITE_CLICKED, placement))

@@ -18,6 +18,7 @@ package com.duckduckgo.sync.impl.autorestore
 
 import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.sync.api.SyncAutoRestore
 import com.duckduckgo.sync.impl.Result
@@ -30,7 +31,6 @@ import dagger.SingleInstanceIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import logcat.LogPriority
 import logcat.logcat
 import javax.inject.Inject
@@ -49,11 +49,10 @@ class RealSyncAutoRestore @Inject constructor(
 
     @Volatile private var restoreTimestamp: Long? = null
 
+    @OnIo
     override suspend fun canRestore(): Boolean {
-        return withContext(dispatcherProvider.io()) {
-            if (!syncFeature.syncAutoRestore().isEnabled()) return@withContext false
-            manager.retrieveRecoveryPayload() != null
-        }
+        if (!syncFeature.syncAutoRestore().isEnabled()) return false
+        return manager.retrieveRecoveryPayload() != null
     }
 
     override fun restoreSyncAccount() {

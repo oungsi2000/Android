@@ -18,6 +18,7 @@ package com.duckduckgo.subscriptions.impl.feedback
 
 import android.util.Base64
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.ActivityScope
 import com.duckduckgo.mobile.android.vpn.state.VpnStateCollector
 import com.duckduckgo.subscriptions.api.Subscriptions
@@ -25,7 +26,6 @@ import com.duckduckgo.subscriptions.impl.feedback.SubscriptionFeedbackCategory.S
 import com.duckduckgo.subscriptions.impl.feedback.SubscriptionFeedbackCategory.VPN
 import com.duckduckgo.subscriptions.impl.repository.isActive
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import javax.inject.Inject
 
@@ -47,16 +47,15 @@ class RealFeedbackCustomMetadataProvider @Inject constructor(
     private val dispatcherProvider: DispatcherProvider,
     private val subscriptions: Subscriptions,
 ) : FeedbackCustomMetadataProvider {
+    @OnIo
     override suspend fun getCustomMetadata(
         category: SubscriptionFeedbackCategory,
         appPackageId: String?,
     ): String {
-        return withContext(dispatcherProvider.io()) {
-            when (category) {
-                VPN -> generateVPNCustomMetadata(appPackageId)
-                SUBS_AND_PAYMENTS -> generateSubscriptionCustomMetadata()
-                else -> ""
-            }
+        return when (category) {
+            VPN -> generateVPNCustomMetadata(appPackageId)
+            SUBS_AND_PAYMENTS -> generateSubscriptionCustomMetadata()
+            else -> ""
         }
     }
 

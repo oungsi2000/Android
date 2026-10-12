@@ -18,13 +18,13 @@ package com.duckduckgo.pir.impl.pixels
 
 import com.duckduckgo.common.utils.CurrentTimeProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.pir.impl.common.matches
 import com.duckduckgo.pir.impl.models.Broker
 import com.duckduckgo.pir.impl.models.ExtractedProfile
 import com.duckduckgo.pir.impl.store.PirRepository
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.days
@@ -40,18 +40,17 @@ class RealWeeklyPixelReporter @Inject constructor(
     private val currentTimeProvider: CurrentTimeProvider,
     private val pixelSender: PirPixelSender,
 ) : WeeklyPixelReporter {
+    @OnIo
     override suspend fun attemptFirePixel() {
-        withContext(dispatcherProvider.io()) {
-            logcat { "PIR-CUSTOM-STATS: Attempt to fire weekly pixels" }
-            val now = currentTimeProvider.currentTimeMillis()
-            val weeklyStatLastSentMs = pirRepository.getWeeklyStatLastSentMs()
-            if (weeklyStatLastSentMs == 0L || didWeekPassedBetweenDates(weeklyStatLastSentMs, now)) {
-                logcat { "PIR-CUSTOM-STATS: Calculating weekly pixels" }
-                attemptFireWeeklyChildBrokerOrphanedOptOutsPixel(now)
-                pirRepository.setWeeklyStatLastSentMs(now)
-            }
-            logcat { "PIR-CUSTOM-STATS: Done attempting to fire weekly pixels" }
+        logcat { "PIR-CUSTOM-STATS: Attempt to fire weekly pixels" }
+        val now = currentTimeProvider.currentTimeMillis()
+        val weeklyStatLastSentMs = pirRepository.getWeeklyStatLastSentMs()
+        if (weeklyStatLastSentMs == 0L || didWeekPassedBetweenDates(weeklyStatLastSentMs, now)) {
+            logcat { "PIR-CUSTOM-STATS: Calculating weekly pixels" }
+            attemptFireWeeklyChildBrokerOrphanedOptOutsPixel(now)
+            pirRepository.setWeeklyStatLastSentMs(now)
         }
+        logcat { "PIR-CUSTOM-STATS: Done attempting to fire weekly pixels" }
     }
 
     private suspend fun attemptFireWeeklyChildBrokerOrphanedOptOutsPixel(nowMs: Long) {

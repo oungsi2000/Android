@@ -19,8 +19,8 @@ package com.duckduckgo.app.browser.tabpreview
 import android.content.Context
 import android.graphics.Bitmap
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.file.FileDeleter
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.INFO
 import logcat.logcat
 import java.io.File
@@ -55,17 +55,16 @@ class FileBasedWebViewPreviewPersister(
         fileDeleter.deleteDirectory(previewDestinationDirectory())
     }
 
+    @OnIo
     override suspend fun save(
         bitmap: Bitmap,
         tabId: String,
     ): String {
-        return withContext(dispatchers.io()) {
-            val previewFile = prepareDestinationFile(tabId)
-            writeBytesToFile(previewFile, bitmap)
+        val previewFile = prepareDestinationFile(tabId)
+        writeBytesToFile(previewFile, bitmap)
 
-            logcat { "Wrote bitmap preview to ${previewFile.absolutePath}" }
-            return@withContext previewFile.name
-        }
+        logcat { "Wrote bitmap preview to ${previewFile.absolutePath}" }
+        return previewFile.name
     }
 
     override suspend fun deletePreviewsForTab(

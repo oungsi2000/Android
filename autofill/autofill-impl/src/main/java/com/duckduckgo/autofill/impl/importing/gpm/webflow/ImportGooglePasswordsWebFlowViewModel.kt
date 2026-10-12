@@ -40,6 +40,7 @@ import com.duckduckgo.autofill.impl.store.ReAuthenticationDetails
 import com.duckduckgo.autofill.impl.store.ReauthenticationHandler
 import com.duckduckgo.autofill.impl.ui.credential.management.importpassword.ImportPasswordsPixelSender
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -49,7 +50,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.parcelize.Parcelize
 import logcat.LogPriority.WARN
 import logcat.logcat
@@ -196,13 +196,12 @@ class ImportGooglePasswordsWebFlowViewModel @AssistedInject constructor(
         }
     }
 
+    @OnIo
     suspend fun getReauthData(originalUrl: String): ReAuthenticationDetails? {
-        return withContext(dispatchers.io()) {
-            if (canReAuthenticate()) {
-                reauthenticationHandler.retrieveReauthData(originalUrl)
-            } else {
-                null
-            }
+        return if (canReAuthenticate()) {
+            reauthenticationHandler.retrieveReauthData(originalUrl)
+        } else {
+            null
         }
     }
 
@@ -228,10 +227,9 @@ class ImportGooglePasswordsWebFlowViewModel @AssistedInject constructor(
         reauthenticationHandler.clearAll()
     }
 
+    @OnIo
     private suspend fun canReAuthenticate(): Boolean {
-        return withContext(dispatchers.io()) {
-            autofillFeature.canReAuthenticateGoogleLoginsAutomatically().isEnabled()
-        }
+        return autofillFeature.canReAuthenticateGoogleLoginsAutomatically().isEnabled()
     }
 
     sealed interface ViewState {

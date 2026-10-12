@@ -17,6 +17,7 @@
 package com.duckduckgo.mobile.android.vpn.bugreport
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.formatters.time.DatabaseDateFormatter
 import com.duckduckgo.common.utils.formatters.time.model.dateOfLastDay
 import com.duckduckgo.di.scopes.ActivityScope
@@ -25,7 +26,6 @@ import com.duckduckgo.mobile.android.vpn.stats.AppTrackerBlockingStatsRepository
 import com.squareup.anvil.annotations.ContributesMultibinding
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
-import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.time.LocalDateTime
 import javax.inject.Inject
@@ -40,27 +40,26 @@ class VpnLastTrackersBlockedCollector @Inject constructor(
     override val collectorName: String
         get() = "trackersBlockedLastDay"
 
+    @OnIo
     override suspend fun collectVpnRelatedState(appPackageId: String?): JSONObject {
-        return withContext(dispatcherProvider.io()) {
-            val result = mutableMapOf<String, List<String>>()
-            appTrackerBlockingRepository.getVpnTrackersSync({ dateOfLastDay() }, noEndDate())
-                .filter { tracker -> appPackageId?.let { tracker.trackingApp.packageId == it } ?: true }
-                .groupBy { it.trackingApp.packageId }
-                .mapValues { entry -> entry.value.map { it.domain } }
-                .onEach {
-                    result[it.key] = it.value.toSet().toList()
-                }
+        val result = mutableMapOf<String, List<String>>()
+        appTrackerBlockingRepository.getVpnTrackersSync({ dateOfLastDay() }, noEndDate())
+            .filter { tracker -> appPackageId?.let { tracker.trackingApp.packageId == it } ?: true }
+            .groupBy { it.trackingApp.packageId }
+            .mapValues { entry -> entry.value.map { it.domain } }
+            .onEach {
+                result[it.key] = it.value.toSet().toList()
+            }
 
-            val adapter = moshi.adapter<Map<String, List<String>>>(
-                Types.newParameterizedType(
-                    Map::class.java,
-                    String::class.java,
-                    List::class.java,
-                    String::class.java,
-                ),
-            )
-            return@withContext JSONObject(adapter.toJson(result))
-        }
+        val adapter = moshi.adapter<Map<String, List<String>>>(
+            Types.newParameterizedType(
+                Map::class.java,
+                String::class.java,
+                List::class.java,
+                String::class.java,
+            ),
+        )
+        return JSONObject(adapter.toJson(result))
     }
 
     private fun noEndDate(): String {

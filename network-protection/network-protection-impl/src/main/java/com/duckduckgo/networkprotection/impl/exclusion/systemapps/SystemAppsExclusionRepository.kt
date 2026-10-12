@@ -22,6 +22,7 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import androidx.core.content.edit
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.extensions.safeGetInstalledApplications
 import com.duckduckgo.data.store.api.SharedPreferencesProvider
 import com.duckduckgo.di.scopes.AppScope
@@ -98,8 +99,9 @@ class RealSystemAppsExclusionRepository @Inject constructor(
         }.setRawStoredState(State(false))
     }
 
-    override suspend fun isCategoryExcluded(category: SystemAppCategory): Boolean = withContext(dispatcherProvider.io()) {
-        return@withContext when (category) {
+    @OnIo
+    override suspend fun isCategoryExcluded(category: SystemAppCategory): Boolean {
+        return when (category) {
             is Communication -> netPSettingsLocalConfig.excludeSystemAppsCommunication()
             is Networking -> netPSettingsLocalConfig.excludeSystemAppsNetworking()
             is Media -> netPSettingsLocalConfig.excludeSystemAppsMedia()
@@ -107,8 +109,9 @@ class RealSystemAppsExclusionRepository @Inject constructor(
         }.isEnabled()
     }
 
-    override suspend fun hasShownWarning(): Boolean = withContext(dispatcherProvider.io()) {
-        return@withContext preferences.getBoolean(KEY_WARNING_SHOWN, false)
+    @OnIo
+    override suspend fun hasShownWarning(): Boolean {
+        return preferences.getBoolean(KEY_WARNING_SHOWN, false)
     }
 
     override suspend fun markWarningShown() = withContext(dispatcherProvider.io()) {
@@ -117,8 +120,9 @@ class RealSystemAppsExclusionRepository @Inject constructor(
         }
     }
 
-    override suspend fun getAvailableCategories(): Set<SystemAppCategory> = withContext(dispatcherProvider.io()) {
-        return@withContext setOf(
+    @OnIo
+    override suspend fun getAvailableCategories(): Set<SystemAppCategory> {
+        return setOf(
             Communication,
             Networking,
             Media,
@@ -134,8 +138,9 @@ class RealSystemAppsExclusionRepository @Inject constructor(
         }
     }
 
-    override suspend fun getAllExcludedSystemApps(): Set<String> = withContext(dispatcherProvider.io()) {
-        return@withContext buildSet {
+    @OnIo
+    override suspend fun getAllExcludedSystemApps(): Set<String> {
+        return buildSet {
             if (isCategoryExcluded(Communication)) addAll(getCommunicationSystemApps())
             if (isCategoryExcluded(Networking)) addAll(getNetworkingSystemApps())
             if (isCategoryExcluded(Media)) addAll(getMediaSystemApps())

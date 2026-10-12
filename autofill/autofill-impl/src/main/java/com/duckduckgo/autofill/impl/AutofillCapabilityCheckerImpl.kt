@@ -20,9 +20,9 @@ import com.duckduckgo.autofill.api.AutofillCapabilityChecker
 import com.duckduckgo.autofill.api.AutofillFeature
 import com.duckduckgo.autofill.api.InternalTestUserChecker
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @ContributesBinding(AppScope::class)
@@ -33,34 +33,37 @@ class AutofillCapabilityCheckerImpl @Inject constructor(
     private val dispatcherProvider: DispatcherProvider,
 ) : AutofillCapabilityChecker {
 
-    override suspend fun canInjectCredentialsToWebView(url: String): Boolean = withContext(dispatcherProvider.io()) {
-        if (!isSecureAutofillAvailable()) return@withContext false
-        if (!isAutofillEnabledByConfiguration(url)) return@withContext false
-        if (!isAutofillEnabledByUser()) return@withContext false
+    @OnIo
+    override suspend fun canInjectCredentialsToWebView(url: String): Boolean {
+        if (!isSecureAutofillAvailable()) return false
+        if (!isAutofillEnabledByConfiguration(url)) return false
+        if (!isAutofillEnabledByUser()) return false
 
-        if (isInternalTester()) return@withContext true
+        if (isInternalTester()) return true
 
-        return@withContext autofillFeature.canInjectCredentials().isEnabled()
+        return autofillFeature.canInjectCredentials().isEnabled()
     }
 
-    override suspend fun canSaveCredentialsFromWebView(url: String): Boolean = withContext(dispatcherProvider.io()) {
-        if (!isSecureAutofillAvailable()) return@withContext false
-        if (!isAutofillEnabledByConfiguration(url)) return@withContext false
-        if (!isAutofillEnabledByUser()) return@withContext false
+    @OnIo
+    override suspend fun canSaveCredentialsFromWebView(url: String): Boolean {
+        if (!isSecureAutofillAvailable()) return false
+        if (!isAutofillEnabledByConfiguration(url)) return false
+        if (!isAutofillEnabledByUser()) return false
 
-        if (isInternalTester()) return@withContext true
+        if (isInternalTester()) return true
 
-        return@withContext autofillFeature.canSaveCredentials().isEnabled()
+        return autofillFeature.canSaveCredentials().isEnabled()
     }
 
-    override suspend fun canGeneratePasswordFromWebView(url: String): Boolean = withContext(dispatcherProvider.io()) {
-        if (!isSecureAutofillAvailable()) return@withContext false
-        if (!isAutofillEnabledByConfiguration(url)) return@withContext false
-        if (!isAutofillEnabledByUser()) return@withContext false
+    @OnIo
+    override suspend fun canGeneratePasswordFromWebView(url: String): Boolean {
+        if (!isSecureAutofillAvailable()) return false
+        if (!isAutofillEnabledByConfiguration(url)) return false
+        if (!isAutofillEnabledByUser()) return false
 
-        if (isInternalTester()) return@withContext true
+        if (isInternalTester()) return true
 
-        return@withContext autofillFeature.canGeneratePasswords().isEnabled()
+        return autofillFeature.canGeneratePasswords().isEnabled()
     }
 
     /**
@@ -69,22 +72,21 @@ class AutofillCapabilityCheckerImpl @Inject constructor(
      *
      * We purposely don't couple this check against [isSecureAutofillAvailable] or [isAutofillEnabledByUser].
      */
-    override suspend fun canAccessCredentialManagementScreen(): Boolean = withContext(dispatcherProvider.io()) {
-        if (isInternalTester()) return@withContext true
-        if (!isGlobalFeatureEnabled()) return@withContext false
-        return@withContext autofillFeature.canAccessCredentialManagement().isEnabled()
+    @OnIo
+    override suspend fun canAccessCredentialManagementScreen(): Boolean {
+        if (isInternalTester()) return true
+        if (!isGlobalFeatureEnabled()) return false
+        return autofillFeature.canAccessCredentialManagement().isEnabled()
     }
 
+    @OnIo
     private suspend fun isInternalTester(): Boolean {
-        return withContext(dispatcherProvider.io()) {
-            internalTestUserChecker.isInternalTestUser
-        }
+        return internalTestUserChecker.isInternalTestUser
     }
 
+    @OnIo
     private suspend fun isGlobalFeatureEnabled(): Boolean {
-        return withContext(dispatcherProvider.io()) {
-            autofillFeature.self().isEnabled()
-        }
+        return autofillFeature.self().isEnabled()
     }
 
     override suspend fun isAutofillEnabledByConfiguration(url: String) = autofillGlobalCapabilityChecker.isAutofillEnabledByConfiguration(url)

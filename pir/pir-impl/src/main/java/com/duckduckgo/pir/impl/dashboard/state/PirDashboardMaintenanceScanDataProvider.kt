@@ -18,6 +18,7 @@ package com.duckduckgo.pir.impl.dashboard.state
 
 import com.duckduckgo.common.utils.CurrentTimeProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.ActivityScope
 import com.duckduckgo.pir.impl.dashboard.state.PirDashboardMaintenanceScanDataProvider.DashboardBrokerMatch
 import com.duckduckgo.pir.impl.dashboard.state.PirDashboardMaintenanceScanDataProvider.DashboardRemovedExtractedProfileResult
@@ -32,7 +33,6 @@ import com.duckduckgo.pir.impl.store.PirRepository
 import com.duckduckgo.pir.impl.store.PirSchedulingRepository
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -93,20 +93,22 @@ class RealPirDashboardMaintenanceScanDataProvider @Inject constructor(
     private val pirRepository: PirRepository,
     private val pirSchedulingRepository: PirSchedulingRepository,
 ) : PirDashboardStateProvider(currentTimeProvider, pirRepository, pirSchedulingRepository), PirDashboardMaintenanceScanDataProvider {
-    override suspend fun getInProgressOptOuts(): List<DashboardExtractedProfileResult> = withContext(dispatcherProvider.io()) {
-        return@withContext getAllExtractedProfileResults(includeResultsForDeprecatedProfileQueries = false).filter {
+    @OnIo
+    override suspend fun getInProgressOptOuts(): List<DashboardExtractedProfileResult> {
+        return getAllExtractedProfileResults(includeResultsForDeprecatedProfileQueries = false).filter {
             it.optOutRemovedDateInMillis == null || it.optOutRemovedDateInMillis == 0L
         }
     }
 
-    override suspend fun getRemovedOptOuts(): List<DashboardRemovedExtractedProfileResult> = withContext(dispatcherProvider.io()) {
+    @OnIo
+    override suspend fun getRemovedOptOuts(): List<DashboardRemovedExtractedProfileResult> {
         val allRemovedExtractedProfiles = getAllExtractedProfileResults(includeResultsForDeprecatedProfileQueries = true).filter {
             it.optOutRemovedDateInMillis != null && it.optOutRemovedDateInMillis != 0L
         }
 
         val brokerMatchesMap = allRemovedExtractedProfiles.groupBy { it.broker }
 
-        return@withContext allRemovedExtractedProfiles.map {
+        return allRemovedExtractedProfiles.map {
             DashboardRemovedExtractedProfileResult(
                 result = it,
                 matches = brokerMatchesMap[it.broker]?.size ?: 0,

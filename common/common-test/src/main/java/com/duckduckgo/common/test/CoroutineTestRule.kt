@@ -17,6 +17,7 @@
 package com.duckduckgo.common.test
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIoAspect
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -40,11 +41,13 @@ class CoroutineTestRule(val testDispatcher: TestDispatcher = UnconfinedTestDispa
     override fun starting(description: Description) {
         super.starting(description)
         Dispatchers.setMain(testDispatcher)
+        OnIoAspect.dispatcher = testDispatcher
     }
 
     override fun finished(description: Description) {
         super.finished(description)
         Dispatchers.resetMain()
+        OnIoAspect.dispatcher = Dispatchers.IO
         testScope.cancel()
     }
 }

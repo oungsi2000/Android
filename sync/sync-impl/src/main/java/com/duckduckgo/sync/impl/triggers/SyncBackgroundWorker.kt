@@ -28,6 +28,7 @@ import com.duckduckgo.anvil.annotations.ContributesWorker
 import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.sync.api.DeviceSyncState
 import com.duckduckgo.sync.api.engine.SyncEngine
@@ -35,7 +36,6 @@ import com.duckduckgo.sync.api.engine.SyncEngine.SyncTrigger.BACKGROUND_SYNC
 import com.squareup.anvil.annotations.ContributesMultibinding
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.VERBOSE
 import logcat.logcat
 import java.util.concurrent.TimeUnit
@@ -57,13 +57,12 @@ class SyncBackgroundWorker(
     @Inject
     lateinit var deviceSyncState: DeviceSyncState
 
+    @OnIo
     override suspend fun doWork(): Result {
-        return withContext(dispatchers.io()) {
-            if (deviceSyncState.isUserSignedInOnDevice()) {
-                syncEngine.triggerSync(BACKGROUND_SYNC)
-            }
-            return@withContext Result.success()
+        if (deviceSyncState.isUserSignedInOnDevice()) {
+            syncEngine.triggerSync(BACKGROUND_SYNC)
         }
+        return Result.success()
     }
 }
 

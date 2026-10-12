@@ -20,10 +20,10 @@ import com.duckduckgo.app.anr.internal.store.AnrInternalEntity
 import com.duckduckgo.app.anr.internal.store.CrashANRsInternalDatabase
 import com.duckduckgo.app.anr.internal.store.CrashInternalEntity
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface CrashANRsRepository {
@@ -46,15 +46,13 @@ class RealCrashANRsRepository @Inject constructor(
         return crashANRsInternalDatabase.crashDao().getCrashes()
     }
 
+    @OnIo
     override suspend fun insertANR(anr: AnrInternalEntity) {
-        withContext(dispatcherProvider.io()) {
-            crashANRsInternalDatabase.anrDao().insertAnr(anr)
-        }
+        crashANRsInternalDatabase.anrDao().insertAnr(anr)
     }
 
+    @OnIo
     override suspend fun insertCrash(crash: CrashInternalEntity) {
-        return withContext(dispatcherProvider.io()) {
-            crashANRsInternalDatabase.crashDao().insertCrash(crash)
-        }
+        crashANRsInternalDatabase.crashDao().insertCrash(crash)
     }
 }

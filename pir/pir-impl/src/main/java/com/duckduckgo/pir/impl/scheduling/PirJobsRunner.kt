@@ -21,6 +21,7 @@ import android.os.PowerManager
 import androidx.core.app.NotificationManagerCompat
 import com.duckduckgo.common.utils.CurrentTimeProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.extensions.isIgnoringBatteryOptimizations
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.networkprotection.api.NetworkProtectionState
@@ -44,7 +45,6 @@ import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import javax.inject.Inject
 
@@ -85,10 +85,11 @@ class RealPirJobsRunner @Inject constructor(
     private val networkProtectionState: NetworkProtectionState,
     private val pirWebViewCountProvider: PirWebViewCountProvider,
 ) : PirJobsRunner {
+    @OnIo
     override suspend fun runEligibleJobs(
         context: Context,
         executionType: PirExecutionType,
-    ): Result<Unit> = withContext(dispatcherProvider.io()) {
+    ): Result<Unit> {
         val startTimeInMillis = currentTimeProvider.currentTimeMillis()
 
         // Multiple profile support (includes deprecated profiles as we need to process opt-out for them if there are extracted profiles)
@@ -118,7 +119,7 @@ class RealPirJobsRunner @Inject constructor(
                 profileQueryCount = 0,
                 brokerCount = activeBrokers.size,
             )
-            return@withContext Result.success(Unit)
+            return Result.success(Unit)
         }
 
         // If no active brokers found, attempt to load broker data before giving up.
@@ -198,10 +199,10 @@ class RealPirJobsRunner @Inject constructor(
                 profileQueryCount = profileQueries.size,
                 brokerCount = 0,
             )
-            return@withContext Result.success(Unit)
+            return Result.success(Unit)
         }
 
-        try {
+        return try {
             storeScanStats(startTimeInMillis, executionType)
 
             val onJobCompletedCallback: suspend () -> Unit = {
@@ -249,7 +250,7 @@ class RealPirJobsRunner @Inject constructor(
                     profileQueryCount = profileQueries.size,
                     brokerCount = activeBrokers.size,
                 )
-                return@withContext Result.success(Unit)
+                return Result.success(Unit)
             }
 
             pirScanWideEvent.onOptOutStarted(executionType)
@@ -269,7 +270,7 @@ class RealPirJobsRunner @Inject constructor(
                 profileQueryCount = profileQueries.size,
                 brokerCount = activeBrokers.size,
             )
-            return@withContext Result.success(Unit)
+            return Result.success(Unit)
         } catch (e: TimeoutCancellationException) {
             pirScanWideEvent.onRunFailed(executionType = executionType, reason = FailureReason.TIMEOUT_CANCELLATION_EXCEPTION)
             throw e
@@ -283,7 +284,7 @@ class RealPirJobsRunner @Inject constructor(
                 reason = FailureReason.RENDERER_GONE,
                 didCrash = e.didCrash,
             )
-            return@withContext Result.failure(e)
+            return Result.failure(e)
         } catch (e: Exception) {
             pirScanWideEvent.onRunFailed(executionType = executionType, reason = FailureReason.fromException(e))
             throw e

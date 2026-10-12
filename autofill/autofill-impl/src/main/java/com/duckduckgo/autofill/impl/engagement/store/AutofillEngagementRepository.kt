@@ -35,11 +35,11 @@ import com.duckduckgo.autofill.store.engagement.AutofillEngagementDao
 import com.duckduckgo.autofill.store.engagement.AutofillEngagementDatabase
 import com.duckduckgo.autofill.store.engagement.AutofillEngagementEntity
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.VERBOSE
 import logcat.logcat
 import java.time.LocalDate
@@ -80,22 +80,20 @@ class DefaultAutofillEngagementRepository @Inject constructor(
 
     private val autofillEngagementDao: AutofillEngagementDao = engagementDb.autofillEngagementDao()
 
+    @OnIo
     override suspend fun recordAutofilledToday() {
-        withContext(dispatchers.io()) {
-            val engagement = todaysEngagement().copy(autofilled = true)
-            logcat(VERBOSE) { "upserting $engagement because user autofilled" }
-            processEvent(engagement)
-            autofillPrefsStore.dataLastAutofilledDate = engagement.date
-        }
+        val engagement = todaysEngagement().copy(autofilled = true)
+        logcat(VERBOSE) { "upserting $engagement because user autofilled" }
+        processEvent(engagement)
+        autofillPrefsStore.dataLastAutofilledDate = engagement.date
     }
 
+    @OnIo
     override suspend fun recordSearchedToday() {
-        withContext(dispatchers.io()) {
-            val engagement = todaysEngagement().copy(searched = true)
-            logcat(VERBOSE) { "upserting $engagement because user searched" }
-            processEvent(engagement)
-            processOnFirstSearchEvent()
-        }
+        val engagement = todaysEngagement().copy(searched = true)
+        logcat(VERBOSE) { "upserting $engagement because user searched" }
+        processEvent(engagement)
+        processOnFirstSearchEvent()
     }
 
     private suspend fun processOnFirstSearchEvent() {
@@ -167,12 +165,11 @@ class DefaultAutofillEngagementRepository @Inject constructor(
         return DATE_FORMATTER.format(LocalDate.now())
     }
 
+    @OnIo
     private suspend fun canSendAutofillToggleStatus(): Boolean {
-        return withContext(dispatchers.io()) {
-            val secureStorageSupported = secureStorage.canAccessSecureStorage()
-            val deviceAuthEnabled = deviceAuthenticator.hasValidDeviceAuthentication()
-            secureStorageSupported && deviceAuthEnabled
-        }
+        val secureStorageSupported = secureStorage.canAccessSecureStorage()
+        val deviceAuthEnabled = deviceAuthenticator.hasValidDeviceAuthentication()
+        return secureStorageSupported && deviceAuthEnabled
     }
 
     companion object {

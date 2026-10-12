@@ -17,11 +17,11 @@
 package com.duckduckgo.app.onboarding
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.duckchat.api.DuckChat
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface DuckAiOnboardingAvailability {
@@ -34,8 +34,8 @@ class RealDuckAiOnboardingAvailability @Inject constructor(
     private val duckChat: DuckChat,
     private val dispatcherProvider: DispatcherProvider,
 ) : DuckAiOnboardingAvailability {
-    override suspend fun isDuckAiOnboardingEnabled(): Boolean =
-        withContext(dispatcherProvider.io()) {
-            duckChat.isEnabled()
-        }
+    @OnIo
+    override suspend fun isDuckAiOnboardingEnabled(): Boolean {
+        return duckChat.isEnabled()
+    }
 }

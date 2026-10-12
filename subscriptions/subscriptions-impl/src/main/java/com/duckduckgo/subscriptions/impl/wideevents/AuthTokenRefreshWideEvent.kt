@@ -23,6 +23,7 @@ import com.duckduckgo.app.statistics.wideevents.WideEventClient
 import com.duckduckgo.app.statistics.wideevents.WideEventDefinition
 import com.duckduckgo.app.statistics.wideevents.WideEventDefinition.Version
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.networkprotection.api.NetworkProtectionState
 import com.duckduckgo.subscriptions.api.SubscriptionStatus
@@ -31,7 +32,6 @@ import com.squareup.anvil.annotations.ContributesBinding
 import dagger.Lazy
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.withContext
 import java.io.Closeable
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
@@ -226,8 +226,9 @@ class AuthTokenRefreshWideEventImpl @Inject constructor(
         }
     }
 
-    private suspend fun isFeatureEnabled(): Boolean = withContext(dispatchers.io()) {
-        subscriptionsFeature.get().sendAuthTokenRefreshWideEvent().isEnabled()
+    @OnIo
+    private suspend fun isFeatureEnabled(): Boolean {
+        return subscriptionsFeature.get().sendAuthTokenRefreshWideEvent().isEnabled()
     }
 
     private companion object {

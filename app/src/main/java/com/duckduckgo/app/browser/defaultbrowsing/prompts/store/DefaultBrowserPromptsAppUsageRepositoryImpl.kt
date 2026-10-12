@@ -23,6 +23,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
@@ -50,12 +51,13 @@ class DefaultBrowserPromptsAppUsageRepositoryImpl @Inject constructor(
         defaultBrowserPromptsAppUsageDao.insert(DefaultBrowserPromptsAppUsageEntity(isoDateET))
     }
 
-    override suspend fun getActiveDaysUsedSinceStart(): Result<Long> = withContext(dispatchers.io()) {
-        try {
+    @OnIo
+    override suspend fun getActiveDaysUsedSinceStart(): Result<Long> {
+        return try {
             // dateETString is already a String like "2025-07-23"
             val dateETString = defaultBrowserPromptsAppUsageDao.getFirstDay()
             if (dateETString == null) {
-                return@withContext Result.failure(IllegalStateException("Date is missing"))
+                return Result.failure(IllegalStateException("Date is missing"))
             }
             val parsedDate = LocalDate.parse(dateETString, DateTimeFormatter.ISO_LOCAL_DATE)
             val isoDateET = parsedDate.format(DateTimeFormatter.ISO_LOCAL_DATE)

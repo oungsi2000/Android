@@ -17,6 +17,7 @@
 package com.duckduckgo.contentscopescripts.impl.features.contentscopeexperiments
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.contentscopescripts.api.contentscopeExperiments.ContentScopeExperiments
 import com.duckduckgo.contentscopescripts.impl.ContentScopeScriptsFeature
 import com.duckduckgo.di.scopes.AppScope
@@ -28,7 +29,6 @@ import com.squareup.anvil.annotations.ContributesMultibinding
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 
@@ -90,27 +90,27 @@ class RealContentScopeExperiments @Inject constructor(
         activeExperiments = null
     }
 
-    private suspend fun cachingEnabled(): Boolean =
-        withContext(dispatcherProvider.io()) {
-            contentScopeScriptsFeature.cacheContentScopeExperiments().isEnabled()
-        }
+    @OnIo
+    private suspend fun cachingEnabled(): Boolean {
+        return contentScopeScriptsFeature.cacheContentScopeExperiments().isEnabled()
+    }
 
-    private suspend fun resolve(): List<Toggle> =
-        withContext(dispatcherProvider.io()) {
-            val featureName = contentScopeExperimentsFeature.self().featureName().name
-            val experiments =
-                if (contentScopeExperimentsFeature.self().isEnabled()) {
-                    featureTogglesInventory.getAllTogglesForParent(featureName)
-                } else {
-                    emptyList()
-                }
-            experiments.mapNotNull {
-                it.enroll()
-                if (it.isEnabled()) {
-                    it
-                } else {
-                    null
-                }
+    @OnIo
+    private suspend fun resolve(): List<Toggle> {
+        val featureName = contentScopeExperimentsFeature.self().featureName().name
+        val experiments =
+            if (contentScopeExperimentsFeature.self().isEnabled()) {
+                featureTogglesInventory.getAllTogglesForParent(featureName)
+            } else {
+                emptyList()
+            }
+        return experiments.mapNotNull {
+            it.enroll()
+            if (it.isEnabled()) {
+                it
+            } else {
+                null
             }
         }
+    }
 }

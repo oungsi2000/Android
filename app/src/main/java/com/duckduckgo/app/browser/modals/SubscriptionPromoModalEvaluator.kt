@@ -18,13 +18,13 @@ package com.duckduckgo.app.browser.modals
 
 import com.duckduckgo.app.cta.ui.SubscriptionPromoModalDecider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.promptscoordinator.api.ModalEvaluator
 import com.duckduckgo.promptscoordinator.api.ModalTrigger
 import com.squareup.anvil.annotations.ContributesMultibinding
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import javax.inject.Inject
 
@@ -43,19 +43,20 @@ class SubscriptionPromoModalEvaluator @Inject constructor(
     override val evaluatorId: String = "subscription_promo_modal"
     override val trigger: ModalTrigger = ModalTrigger.APP_RESUME
 
-    override suspend fun evaluate(): ModalEvaluator.EvaluationResult = withContext(dispatchers.io()) {
+    @OnIo
+    override suspend fun evaluate(): ModalEvaluator.EvaluationResult {
         val decision = decider.decide()
-            ?: return@withContext ModalEvaluator.EvaluationResult.Skipped
+            ?: return ModalEvaluator.EvaluationResult.Skipped
 
         delay(MODAL_DISPLAY_DELAY)
         val presenter = presenterRegistry.current()
         if (presenter == null) {
             logcat { "SubscriptionPromoModalEvaluator: no presenter registered, skipping" }
-            return@withContext ModalEvaluator.EvaluationResult.Skipped
+            return ModalEvaluator.EvaluationResult.Skipped
         }
 
         val shown = presenter.showSubscriptionPromo(decision.flow, decision.isFreeTrialCopy)
-        if (shown) {
+        return if (shown) {
             ModalEvaluator.EvaluationResult.ModalShown
         } else {
             ModalEvaluator.EvaluationResult.Skipped

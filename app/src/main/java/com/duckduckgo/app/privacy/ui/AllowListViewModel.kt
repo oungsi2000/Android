@@ -27,11 +27,11 @@ import com.duckduckgo.app.privacy.db.UserAllowListDao
 import com.duckduckgo.app.privacy.model.UserAllowListedDomain
 import com.duckduckgo.app.privacy.ui.AllowListViewModel.Command.*
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.SingleLiveEvent
 import com.duckduckgo.di.scopes.ActivityScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @ContributesViewModel(ActivityScope::class)
@@ -118,11 +118,13 @@ class AllowListViewModel @Inject constructor(
         }
     }
 
+    @OnIo
     private suspend fun addEntryToDatabase(entry: UserAllowListedDomain) {
-        withContext(dispatchers.io()) { dao.insert(entry) }
+        dao.insert(entry)
     }
 
+    @OnIo
     private suspend fun deleteEntryFromDatabase(entry: UserAllowListedDomain) {
-        withContext(dispatchers.io()) { dao.delete(entry) }
+        dao.delete(entry)
     }
 }

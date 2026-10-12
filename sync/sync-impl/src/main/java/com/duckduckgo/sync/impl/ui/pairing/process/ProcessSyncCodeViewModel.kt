@@ -20,6 +20,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.sync.impl.AccountErrorCodes.ALREADY_SIGNED_IN
 import com.duckduckgo.sync.impl.DispatchOutcome
 import com.duckduckgo.sync.impl.ExchangeResult.AccountSwitchingRequired
@@ -333,8 +334,9 @@ class ProcessSyncCodeViewModel @AssistedInject constructor(
         }
     }
 
-    private suspend fun pairingResult(): SyncPairingResult = withContext(dispatchers.io()) {
-        accountRepository
+    @OnIo
+    private suspend fun pairingResult(): SyncPairingResult {
+        return accountRepository
             .getThisConnectedDevice()
             ?.let(ParcelableDevice::fromConnectedDevice)
             ?.let { device -> SyncPairingResult.Success(device, source.entryPoint) }

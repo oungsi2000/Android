@@ -17,10 +17,10 @@
 package com.duckduckgo.sync.impl
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.sync.impl.Result.Success
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import javax.inject.Inject
 
@@ -44,14 +44,15 @@ class RealLoginDeviceInfoWriter @Inject constructor(
     private val dispatchers: DispatcherProvider,
 ) : LoginDeviceInfoWriter {
 
-    override suspend fun onLogin(loginResponseKeys: List<ProtectedKeyEntry>?): Result<Unit> = withContext(dispatchers.io()) {
-        if (!syncFeature.canWriteDeviceInfo()) return@withContext Success(Unit)
+    @OnIo
+    override suspend fun onLogin(loginResponseKeys: List<ProtectedKeyEntry>?): Result<Unit> {
+        if (!syncFeature.canWriteDeviceInfo()) return Success(Unit)
         val accountInfoKeys = loginResponseKeys.orEmpty().filter { it.purpose == SYNC_PURPOSE_ACCOUNT_INFO }
         if (accountInfoKeys.isEmpty()) {
             logcat { "Sync-UnifiedDevices: no account_info key in login response; migration will create it" }
         } else {
             accountInfoDdgWrapRepairer.repair(accountInfoKeys.first().kid, accountInfoKeys)
         }
-        deviceInfoMigrator.ensureMigrated()
+        return deviceInfoMigrator.ensureMigrated()
     }
 }

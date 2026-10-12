@@ -27,13 +27,13 @@ import com.duckduckgo.app.settings.clear.ClearWhenOption
 import com.duckduckgo.app.settings.clear.FireClearOption
 import com.duckduckgo.app.settings.db.SettingsDataStore
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import javax.inject.Inject
 
@@ -145,8 +145,9 @@ class SharedPreferencesFireDataStore @Inject constructor(
         val KEY_FIRE_TABS_USED_FIRE_MODE = booleanPreferencesKey(name = "FIRE_TABS_USED_FIRE_MODE")
     }
 
-    private suspend fun getLegacyOptions(): Set<FireClearOption> = withContext(dispatcherProvider.io()) {
-        buildSet {
+    @OnIo
+    private suspend fun getLegacyOptions(): Set<FireClearOption> {
+        return buildSet {
             when (settingsDataStore.automaticallyClearWhatOption) {
                 ClearWhatOption.CLEAR_NONE -> Unit
                 ClearWhatOption.CLEAR_TABS_ONLY -> add(FireClearOption.TABS)
@@ -161,8 +162,9 @@ class SharedPreferencesFireDataStore @Inject constructor(
         }
     }
 
-    private suspend fun getLegacyWhenOption(): ClearWhenOption = withContext(dispatcherProvider.io()) {
-        settingsDataStore.automaticallyClearWhenOption
+    @OnIo
+    private suspend fun getLegacyWhenOption(): ClearWhenOption {
+        return settingsDataStore.automaticallyClearWhenOption
     }
 
     override fun getManualClearOptionsFlow(): Flow<Set<FireClearOption>> {
@@ -176,8 +178,9 @@ class SharedPreferencesFireDataStore @Inject constructor(
         return getManualClearOptionsFlow().firstOrNull() ?: getDefaultManualOptions()
     }
 
-    private suspend fun getDefaultManualOptions(): Set<FireClearOption> = withContext(dispatcherProvider.io()) {
-        buildSet {
+    @OnIo
+    private suspend fun getDefaultManualOptions(): Set<FireClearOption> {
+        return buildSet {
             addAll(DEFAULT_OPTIONS)
             if (settingsDataStore.clearDuckAiData) {
                 add(FireClearOption.DUCKAI_CHATS)

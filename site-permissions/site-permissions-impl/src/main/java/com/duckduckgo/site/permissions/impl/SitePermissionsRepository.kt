@@ -19,6 +19,7 @@ package com.duckduckgo.site.permissions.impl
 import android.webkit.PermissionRequest
 import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.extractDomain
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.site.permissions.api.SitePermissionsManager.LocationPermissionRequest
@@ -243,14 +244,13 @@ class SitePermissionsRepositoryImpl @Inject constructor(
         return drmBlock.isDrmBlockedForUrl(url)
     }
 
+    @OnIo
     override suspend fun undoDeleteAll(sitePermissions: List<SitePermissionsEntity>, allowedSites: List<SitePermissionAllowedEntity>) {
-        withContext(dispatcherProvider.io()) {
-            sitePermissions.forEach { entity ->
-                sitePermissionsDao.insert(entity)
-            }
-            allowedSites.forEach { entity ->
-                sitePermissionsAllowedDao.insert(entity)
-            }
+        sitePermissions.forEach { entity ->
+            sitePermissionsDao.insert(entity)
+        }
+        allowedSites.forEach { entity ->
+            sitePermissionsAllowedDao.insert(entity)
         }
     }
 
@@ -259,26 +259,23 @@ class SitePermissionsRepositoryImpl @Inject constructor(
         sitePermissionsAllowedDao.deleteAll()
     }
 
+    @OnIo
     override suspend fun getSitePermissionsForWebsite(domain: String): SitePermissionsEntity? {
-        return withContext(dispatcherProvider.io()) {
-            logcat { "Permissions: getSitePermissionsForWebsite for $domain" }
-            sitePermissionsDao.getSitePermissionsByDomain(domain)
-        }
+        logcat { "Permissions: getSitePermissionsForWebsite for $domain" }
+        return sitePermissionsDao.getSitePermissionsByDomain(domain)
     }
 
+    @OnIo
     override suspend fun deletePermissionsForSite(url: String) {
-        return withContext(dispatcherProvider.io()) {
-            val domain = url.extractDomain() ?: url
-            val entity = sitePermissionsDao.getSitePermissionsByDomain(domain)
-            entity?.let { sitePermissionsDao.delete(it) }
-            sitePermissionsAllowedDao.deleteAllowedSitesForDomain(domain)
-        }
+        val domain = url.extractDomain() ?: url
+        val entity = sitePermissionsDao.getSitePermissionsByDomain(domain)
+        entity?.let { sitePermissionsDao.delete(it) }
+        sitePermissionsAllowedDao.deleteAllowedSitesForDomain(domain)
     }
 
+    @OnIo
     override suspend fun savePermission(sitePermissionsEntity: SitePermissionsEntity) {
-        withContext(dispatcherProvider.io()) {
-            sitePermissionsDao.insert(sitePermissionsEntity)
-        }
+        sitePermissionsDao.insert(sitePermissionsEntity)
     }
 
     override fun sitePermissionPermanentlySaved(url: String, permission: String, settingType: SitePermissionAskSettingType) {

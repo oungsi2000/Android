@@ -24,12 +24,12 @@ import com.duckduckgo.autofill.impl.securestorage.SecureStorageException
 import com.duckduckgo.autofill.impl.securestorage.SecureStorageException.InternalSecureStorageException
 import com.duckduckgo.autofill.impl.securestorage.encryption.EncryptionHelper.EncryptedBytes
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.sanitizeStackTrace
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import java.lang.Exception
 import java.security.Key
 import javax.crypto.Cipher
@@ -71,11 +71,12 @@ class RealEncryptionHelper @Inject constructor(
     private val encryptMutex = Mutex()
     private val decryptMutex = Mutex()
 
+    @OnIo
     override suspend fun encrypt(
         raw: ByteArray,
         key: Key,
-    ): EncryptedBytes = withContext(dispatcherProvider.io()) {
-        encryptMutex.withLock {
+    ): EncryptedBytes {
+        return encryptMutex.withLock {
             val encrypted = try {
                 encryptionCipher.init(Cipher.ENCRYPT_MODE, key)
                 encryptionCipher.doFinal(raw)
@@ -95,11 +96,12 @@ class RealEncryptionHelper @Inject constructor(
         }
     }
 
+    @OnIo
     override suspend fun decrypt(
         toDecrypt: EncryptedBytes,
         key: Key,
-    ): ByteArray = withContext(dispatcherProvider.io()) {
-        decryptMutex.withLock {
+    ): ByteArray {
+        return decryptMutex.withLock {
             try {
                 val ivSpec = GCMParameterSpec(GCM_PARAM_SPEC_LENGTH, toDecrypt.iv)
                 decryptionCipher.init(Cipher.DECRYPT_MODE, key, ivSpec)

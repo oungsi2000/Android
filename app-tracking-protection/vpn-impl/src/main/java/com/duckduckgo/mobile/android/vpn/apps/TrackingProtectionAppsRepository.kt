@@ -20,6 +20,7 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.extensions.isDdgApp
 import com.duckduckgo.common.utils.extensions.safeGetInstalledApplications
 import com.duckduckgo.di.scopes.AppScope
@@ -36,7 +37,6 @@ import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import javax.inject.Inject
 
@@ -119,10 +119,11 @@ class RealTrackingProtectionAppsRepository @Inject constructor(
             .filterNot { shouldNotBeShown(it) }
     }
 
-    override suspend fun getExclusionAppsList(): List<String> = withContext(dispatcherProvider.io()) {
+    @OnIo
+    override suspend fun getExclusionAppsList(): List<String> {
         val exclusionList = appTrackerRepository.getAppExclusionList()
         val manualExclusionList = appTrackerRepository.getManualAppExclusionList()
-        return@withContext packageManager.safeGetInstalledApplications(context)
+        return packageManager.safeGetInstalledApplications(context)
             .asSequence()
             .filter { isExcludedFromAppTP(it, exclusionList, manualExclusionList) }
             .sortedBy { it.name }
@@ -193,22 +194,19 @@ class RealTrackingProtectionAppsRepository @Inject constructor(
         return userExcludedApp != null
     }
 
+    @OnIo
     override suspend fun manuallyEnabledApp(packageName: String) {
-        withContext(dispatcherProvider.io()) {
-            appTrackerRepository.manuallyEnabledApp(packageName)
-        }
+        appTrackerRepository.manuallyEnabledApp(packageName)
     }
 
+    @OnIo
     override suspend fun manuallyExcludeApp(packageName: String) {
-        withContext(dispatcherProvider.io()) {
-            appTrackerRepository.manuallyExcludedApp(packageName)
-        }
+        appTrackerRepository.manuallyExcludedApp(packageName)
     }
 
+    @OnIo
     override suspend fun restoreDefaultProtectedList() {
-        withContext(dispatcherProvider.io()) {
-            appTrackerRepository.restoreDefaultProtectedList()
-        }
+        appTrackerRepository.restoreDefaultProtectedList()
     }
 
     override suspend fun getAppProtectionStatus(packageName: String): ProtectionState {

@@ -17,11 +17,11 @@
 package com.duckduckgo.autofill.impl.sharedcreds
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import com.squareup.moshi.Moshi
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
 import logcat.logcat
 import javax.inject.Inject
@@ -37,10 +37,9 @@ class AppleSharedCredentialsJsonReader @Inject constructor(
     private val dispatchers: DispatcherProvider,
 ) : SharedCredentialJsonReader {
 
+    @OnIo
     override suspend fun read(): String? {
-        return withContext(dispatchers.io()) {
-            loadJson()
-        }
+        return loadJson()
     }
 
     private fun loadJson(): String? {

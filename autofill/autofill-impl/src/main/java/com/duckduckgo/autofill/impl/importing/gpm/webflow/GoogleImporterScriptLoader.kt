@@ -19,9 +19,9 @@ package com.duckduckgo.autofill.impl.importing.gpm.webflow
 import com.duckduckgo.autofill.impl.importing.gpm.feature.AutofillImportPasswordConfigStore
 import com.duckduckgo.autofill.impl.importing.takeout.store.BookmarkImportConfigStore
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.FragmentScope
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import javax.inject.Inject
 
@@ -39,21 +39,21 @@ class GoogleImporterScriptLoaderImpl @Inject constructor(
 ) : GoogleImporterScriptLoader {
     private lateinit var contentScopeJS: String
 
-    override suspend fun getScriptForPasswordImport(): String =
-        withContext(dispatchers.io()) {
-            getContentScopeJS()
-                .replace(CONTENT_SCOPE_PLACEHOLDER, getContentScopeScriptJson(loadSettingsJsonPassword()))
-                .replace(USER_UNPROTECTED_DOMAINS_PLACEHOLDER, getUnprotectedDomainsJson())
-                .replace(USER_PREFERENCES_PLACEHOLDER, getUserPreferencesJson())
-        }
+    @OnIo
+    override suspend fun getScriptForPasswordImport(): String {
+        return getContentScopeJS()
+            .replace(CONTENT_SCOPE_PLACEHOLDER, getContentScopeScriptJson(loadSettingsJsonPassword()))
+            .replace(USER_UNPROTECTED_DOMAINS_PLACEHOLDER, getUnprotectedDomainsJson())
+            .replace(USER_PREFERENCES_PLACEHOLDER, getUserPreferencesJson())
+    }
 
-    override suspend fun getScriptForBookmarkImport(): String =
-        withContext(dispatchers.io()) {
-            getContentScopeJS()
-                .replace(CONTENT_SCOPE_PLACEHOLDER, getContentScopeScriptJson(loadSettingsJsonBookmark()))
-                .replace(USER_UNPROTECTED_DOMAINS_PLACEHOLDER, getUnprotectedDomainsJson())
-                .replace(USER_PREFERENCES_PLACEHOLDER, getUserPreferencesJson())
-        }
+    @OnIo
+    override suspend fun getScriptForBookmarkImport(): String {
+        return getContentScopeJS()
+            .replace(CONTENT_SCOPE_PLACEHOLDER, getContentScopeScriptJson(loadSettingsJsonBookmark()))
+            .replace(USER_UNPROTECTED_DOMAINS_PLACEHOLDER, getUnprotectedDomainsJson())
+            .replace(USER_PREFERENCES_PLACEHOLDER, getUserPreferencesJson())
+    }
 
     /**
      * This enables the password import hints feature in C-S-S.

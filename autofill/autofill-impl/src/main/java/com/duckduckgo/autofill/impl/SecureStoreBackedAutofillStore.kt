@@ -37,6 +37,7 @@ import com.duckduckgo.autofill.store.LastUpdatedTimeProvider
 import com.duckduckgo.autofill.sync.SyncCredentialsListener
 import com.duckduckgo.common.utils.DefaultDispatcherProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.plugins.PluginPoint
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
@@ -378,31 +379,28 @@ class SecureStoreBackedAutofillStore @Inject constructor(
         )
     }
 
+    @OnIo
     override suspend fun reinsertCredentials(credentials: LoginCredentials) {
-        withContext(dispatcherProvider.io()) {
-            secureStorage.addWebsiteLoginDetailsWithCredentials(credentials.prepareForBulkInsertion())?.also {
-                syncCredentialsListener.onCredentialAdded(it.details.id!!)
-            }
+        secureStorage.addWebsiteLoginDetailsWithCredentials(credentials.prepareForBulkInsertion())?.also {
+            syncCredentialsListener.onCredentialAdded(it.details.id!!)
         }
     }
 
+    @OnIo
     override suspend fun reinsertCredentials(credentials: List<LoginCredentials>) {
-        withContext(dispatcherProvider.io()) {
-            val mappedCredentials = credentials.map { it.prepareForBulkInsertion() }
-            secureStorage.addWebsiteLoginDetailsWithCredentials(mappedCredentials).also {
-                val ids = mappedCredentials.mapNotNull { it.details.id }
-                syncCredentialsListener.onCredentialsAdded(ids)
-            }
+        val mappedCredentials = credentials.map { it.prepareForBulkInsertion() }
+        secureStorage.addWebsiteLoginDetailsWithCredentials(mappedCredentials).also {
+            val ids = mappedCredentials.mapNotNull { it.details.id }
+            syncCredentialsListener.onCredentialsAdded(ids)
         }
     }
 
+    @OnIo
     override suspend fun bulkInsert(credentials: List<LoginCredentials>): List<Long> {
-        return withContext(dispatcherProvider.io()) {
-            val mappedCredentials = credentials.map { it.prepareForBulkInsertion() }
-            return@withContext secureStorage.addWebsiteLoginDetailsWithCredentials(mappedCredentials).also { credentialsAdded ->
-                syncCredentialsListener.onCredentialsAdded(credentialsAdded)
-                passwordStoreEventListeners.forEach { it.onCredentialAdded(credentialsAdded) }
-            }
+        val mappedCredentials = credentials.map { it.prepareForBulkInsertion() }
+        return secureStorage.addWebsiteLoginDetailsWithCredentials(mappedCredentials).also { credentialsAdded ->
+            syncCredentialsListener.onCredentialsAdded(credentialsAdded)
+            passwordStoreEventListeners.forEach { it.onCredentialAdded(credentialsAdded) }
         }
     }
 

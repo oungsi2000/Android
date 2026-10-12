@@ -22,9 +22,9 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Base64
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import java.util.UUID
 import javax.inject.Inject
 
@@ -37,14 +37,15 @@ class RealFileAttachmentProcessor @Inject constructor(
     private val dispatcherProvider: DispatcherProvider,
 ) : FileAttachmentProcessor {
 
-    override suspend fun processFile(context: Context, uri: Uri): FileAttachment? = withContext(dispatcherProvider.io()) {
-        runCatching {
-            val (fileName, reportedSize) = resolveFileInfo(context, uri) ?: return@withContext null
+    @OnIo
+    override suspend fun processFile(context: Context, uri: Uri): FileAttachment? {
+        return runCatching {
+            val (fileName, reportedSize) = resolveFileInfo(context, uri) ?: return null
             val mimeType = context.contentResolver.getType(uri) ?: "application/octet-stream"
 
             // readBytes() + encodeToString each hold the full payload in memory simultaneously (~1.33× file size peak).
             // At the 5 MB per-file limit this is ~6.7 MB per file; no streaming Base64 path exists on Android.
-            val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return@withContext null
+            val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return null
             val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
 
             // Some providers omit the SIZE column or return NULL; fall back to the actual byte count so that

@@ -18,13 +18,13 @@ package com.duckduckgo.mobile.android.vpn.bugreport
 
 import com.duckduckgo.anvil.annotations.ContributesPluginPoint
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.plugins.PluginPoint
 import com.duckduckgo.di.scopes.ActivityScope
 import com.duckduckgo.mobile.android.vpn.state.VpnStateCollector
 import com.duckduckgo.mobile.android.vpn.state.VpnStateCollectorPlugin
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import org.json.JSONObject
 import javax.inject.Inject
@@ -36,17 +36,16 @@ class RealVpnStateCollector @Inject constructor(
     private val dispatcherProvider: DispatcherProvider,
 ) : VpnStateCollector {
 
+    @OnIo
     override suspend fun collectVpnState(appPackageId: String?): JSONObject {
-        return withContext(dispatcherProvider.io()) {
-            val vpnState = JSONObject()
-            // other VPN metrics
-            vpnStateCollectors.getPlugins().forEach {
-                logcat { "collectVpnState from ${it.collectorName}" }
-                vpnState.put(it.collectorName, it.collectVpnRelatedState(appPackageId))
-            }
-
-            return@withContext vpnState
+        val vpnState = JSONObject()
+        // other VPN metrics
+        vpnStateCollectors.getPlugins().forEach {
+            logcat { "collectVpnState from ${it.collectorName}" }
+            vpnState.put(it.collectorName, it.collectVpnRelatedState(appPackageId))
         }
+
+        return vpnState
     }
 }
 

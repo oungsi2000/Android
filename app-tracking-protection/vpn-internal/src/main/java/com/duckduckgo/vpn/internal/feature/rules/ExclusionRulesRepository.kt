@@ -17,6 +17,7 @@
 package com.duckduckgo.vpn.internal.feature.rules
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.mobile.android.vpn.store.VpnDatabase
 import com.duckduckgo.mobile.android.vpn.trackers.AppTrackerExceptionRule
 import kotlinx.coroutines.withContext
@@ -60,8 +61,9 @@ class ExclusionRulesRepository @Inject constructor(
         }
     }
 
-    suspend fun getAllTrackerRules(): List<AppTrackerExceptionRule> = withContext(dispatcherProvider.io()) {
-        return@withContext blockingDao.getTrackerExceptionRules()
+    @OnIo
+    suspend fun getAllTrackerRules(): List<AppTrackerExceptionRule> {
+        return blockingDao.getTrackerExceptionRules()
     }
 
     suspend fun deleteAllTrackerRules() = withContext(dispatcherProvider.io()) {

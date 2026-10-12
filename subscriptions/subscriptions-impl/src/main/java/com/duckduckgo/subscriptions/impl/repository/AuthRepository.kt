@@ -17,6 +17,7 @@
 package com.duckduckgo.subscriptions.impl.repository
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.data.store.api.SharedPreferencesProvider
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.subscriptions.api.ActiveOfferType
@@ -142,10 +143,11 @@ internal class RealAuthRepository constructor(
         updateSerpPromoCookie()
     }
 
-    override suspend fun getAccessTokenV2(): AccessToken? = withContext(dispatcherProvider.io()) {
-        val jwt = subscriptionsDataStore.accessTokenV2 ?: return@withContext null
-        val expiresAt = subscriptionsDataStore.accessTokenV2ExpiresAt ?: return@withContext null
-        AccessToken(jwt, expiresAt)
+    @OnIo
+    override suspend fun getAccessTokenV2(): AccessToken? {
+        val jwt = subscriptionsDataStore.accessTokenV2 ?: return null
+        val expiresAt = subscriptionsDataStore.accessTokenV2ExpiresAt ?: return null
+        return AccessToken(jwt, expiresAt)
     }
 
     override suspend fun setRefreshTokenV2(refreshToken: RefreshToken?) = withContext(dispatcherProvider.io()) {
@@ -153,18 +155,20 @@ internal class RealAuthRepository constructor(
         subscriptionsDataStore.refreshTokenV2ExpiresAt = refreshToken?.expiresAt
     }
 
-    override suspend fun getRefreshTokenV2(): RefreshToken? = withContext(dispatcherProvider.io()) {
-        val jwt = subscriptionsDataStore.refreshTokenV2 ?: return@withContext null
-        val expiresAt = subscriptionsDataStore.refreshTokenV2ExpiresAt ?: return@withContext null
-        RefreshToken(jwt, expiresAt)
+    @OnIo
+    override suspend fun getRefreshTokenV2(): RefreshToken? {
+        val jwt = subscriptionsDataStore.refreshTokenV2 ?: return null
+        val expiresAt = subscriptionsDataStore.refreshTokenV2ExpiresAt ?: return null
+        return RefreshToken(jwt, expiresAt)
     }
 
     override suspend fun setEntitlements(entitlements: List<Entitlement>) = withContext(dispatcherProvider.io()) {
         subscriptionsDataStore.entitlements = moshi.listToJson(entitlements)
     }
 
-    override suspend fun getEntitlements(): List<Entitlement> = withContext(dispatcherProvider.io()) {
-        subscriptionsDataStore.entitlements?.let { moshi.parseList(it) } ?: emptyList()
+    @OnIo
+    override suspend fun getEntitlements(): List<Entitlement> {
+        return subscriptionsDataStore.entitlements?.let { moshi.parseList(it) } ?: emptyList()
     }
 
     override suspend fun setAccessToken(accessToken: String?) = withContext(dispatcherProvider.io()) {
@@ -180,16 +184,19 @@ internal class RealAuthRepository constructor(
         subscriptionsDataStore.status = WAITING.statusName
     }
 
-    override suspend fun getStatus(): SubscriptionStatus = withContext(dispatcherProvider.io()) {
-        subscriptionsDataStore.status?.toStatus() ?: UNKNOWN
+    @OnIo
+    override suspend fun getStatus(): SubscriptionStatus {
+        return subscriptionsDataStore.status?.toStatus() ?: UNKNOWN
     }
 
-    override suspend fun getAccessToken(): String? = withContext(dispatcherProvider.io()) {
-        subscriptionsDataStore.accessToken
+    @OnIo
+    override suspend fun getAccessToken(): String? {
+        return subscriptionsDataStore.accessToken
     }
 
-    override suspend fun getAuthToken(): String? = withContext(dispatcherProvider.io()) {
-        subscriptionsDataStore.authToken
+    @OnIo
+    override suspend fun getAuthToken(): String? {
+        return subscriptionsDataStore.authToken
     }
 
     override suspend fun setSubscription(subscription: Subscription?) = withContext(dispatcherProvider.io()) {
@@ -226,13 +233,14 @@ internal class RealAuthRepository constructor(
         }
     }
 
-    override suspend fun getSubscription(): Subscription? = withContext(dispatcherProvider.io()) {
-        val productId = subscriptionsDataStore.productId ?: return@withContext null
-        val billingPeriod = subscriptionsDataStore.billingPeriod ?: return@withContext null
-        val startedAt = subscriptionsDataStore.startedAt ?: return@withContext null
-        val expiresOrRenewsAt = subscriptionsDataStore.expiresOrRenewsAt ?: return@withContext null
-        val status = subscriptionsDataStore.status?.toStatus() ?: return@withContext null
-        val platform = subscriptionsDataStore.platform ?: return@withContext null
+    @OnIo
+    override suspend fun getSubscription(): Subscription? {
+        val productId = subscriptionsDataStore.productId ?: return null
+        val billingPeriod = subscriptionsDataStore.billingPeriod ?: return null
+        val startedAt = subscriptionsDataStore.startedAt ?: return null
+        val expiresOrRenewsAt = subscriptionsDataStore.expiresOrRenewsAt ?: return null
+        val status = subscriptionsDataStore.status?.toStatus() ?: return null
+        val platform = subscriptionsDataStore.platform ?: return null
         val activeOffers = if (subscriptionsDataStore.freeTrialActive) listOf(ActiveOfferType.TRIAL) else listOf()
         val pendingPlans = subscriptionsDataStore.pendingPlans?.let { json ->
             runCatching {
@@ -247,7 +255,7 @@ internal class RealAuthRepository constructor(
                 }
             }.getOrDefault(emptyList())
         } ?: emptyList()
-        Subscription(
+        return Subscription(
             productId = productId,
             billingPeriod = billingPeriod,
             startedAt = startedAt,
@@ -264,18 +272,20 @@ internal class RealAuthRepository constructor(
         subscriptionsDataStore.email = account?.email
     }
 
-    override suspend fun getAccount(): Account? = withContext(dispatcherProvider.io()) {
-        val externalId = subscriptionsDataStore.externalId ?: return@withContext null
+    @OnIo
+    override suspend fun getAccount(): Account? {
+        val externalId = subscriptionsDataStore.externalId ?: return null
         val email = subscriptionsDataStore.email
 
-        Account(
+        return Account(
             email = email,
             externalId = externalId,
         )
     }
 
-    override suspend fun canSupportEncryption(): Boolean = withContext(dispatcherProvider.io()) {
-        subscriptionsDataStore.canUseEncryption()
+    @OnIo
+    override suspend fun canSupportEncryption(): Boolean {
+        return subscriptionsDataStore.canUseEncryption()
     }
 
     override suspend fun setFeatures(
@@ -291,17 +301,18 @@ internal class RealAuthRepository constructor(
         subscriptionsDataStore.subscriptionFeatures = featuresAdapter.toJson(featuresMap)
     }
 
-    override suspend fun getFeatures(basePlanId: String): Set<String> = withContext(dispatcherProvider.io()) {
+    @OnIo
+    override suspend fun getFeatures(basePlanId: String): Set<String> {
         if (subscriptionsFeature.get().tierMessagingEnabled().isEnabled()) {
             // When flag is ON, try v2 first
             val v2Features = getFeaturesV2(basePlanId)
             if (v2Features.isNotEmpty()) {
-                return@withContext v2Features.map { it.product }.toSet()
+                return v2Features.map { it.product }.toSet()
             }
             // Fallback to v1 for smooth runtime flag transitions (until fetcher runs on next app start)
         }
         // Use v1 storage
-        return@withContext subscriptionsDataStore.subscriptionFeatures
+        return subscriptionsDataStore.subscriptionFeatures
             ?.let(featuresAdapter::fromJson)
             ?.get(basePlanId) ?: emptySet()
     }
@@ -317,8 +328,9 @@ internal class RealAuthRepository constructor(
         subscriptionsDataStore.subscriptionEntitlements = featuresV2Adapter.toJson(featuresMap)
     }
 
-    override suspend fun getFeaturesV2(basePlanId: String): Set<Entitlement> = withContext(dispatcherProvider.io()) {
-        subscriptionsDataStore.subscriptionEntitlements
+    @OnIo
+    override suspend fun getFeaturesV2(basePlanId: String): Set<Entitlement> {
+        return subscriptionsDataStore.subscriptionEntitlements
             ?.let(featuresV2Adapter::fromJson)
             ?.get(basePlanId) ?: emptySet()
     }
@@ -364,8 +376,9 @@ internal class RealAuthRepository constructor(
         }
     }
 
-    override suspend fun getPendingPlans(): List<PendingPlan> = withContext(dispatcherProvider.io()) {
-        subscriptionsDataStore.pendingPlans?.let { json ->
+    @OnIo
+    override suspend fun getPendingPlans(): List<PendingPlan> {
+        return subscriptionsDataStore.pendingPlans?.let { json ->
             runCatching {
                 pendingPlansListAdapter.fromJson(json)?.map { planJson ->
                     PendingPlan(

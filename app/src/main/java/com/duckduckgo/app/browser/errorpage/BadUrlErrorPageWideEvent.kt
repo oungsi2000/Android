@@ -30,6 +30,7 @@ import com.duckduckgo.app.tabs.model.TabRepository
 import com.duckduckgo.browsermode.api.FireMode
 import com.duckduckgo.browsermode.api.RegularMode
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.Lazy
@@ -42,7 +43,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -359,9 +359,10 @@ class RealBadUrlErrorPageWideEvent @Inject constructor(
         closedTabsObserverJob = null
     }
 
-    private suspend fun isRecordingEnabled(): Boolean = withContext(dispatchers.io()) {
+    @OnIo
+    private suspend fun isRecordingEnabled(): Boolean {
         // Suggest redirect feature conditions to be removed once we remove its feature flag
-        badUrlErrorPageWideEventFeature.get().self().isEnabled() &&
+        return badUrlErrorPageWideEventFeature.get().self().isEnabled() &&
             suggestRedirectFeature.self().isEnabled() &&
             suggestRedirectFeature.suggestRedirect().isEnabled()
     }

@@ -28,6 +28,7 @@ import androidx.work.WorkerParameters
 import com.duckduckgo.anvil.annotations.ContributesWorker
 import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.malicioussiteprotection.api.MaliciousSiteProtection.Feed
 import com.duckduckgo.malicioussiteprotection.api.MaliciousSiteProtection.Feed.MALWARE
@@ -37,7 +38,6 @@ import com.duckduckgo.malicioussiteprotection.impl.data.MaliciousSiteRepository
 import com.duckduckgo.privacy.config.api.PrivacyConfigCallbackPlugin
 import com.squareup.anvil.annotations.ContributesMultibinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -57,28 +57,27 @@ class MaliciousSiteProtectionHashPrefixesUpdateWorker(
     @Inject
     lateinit var maliciousSiteProtectionFeature: MaliciousSiteProtectionRCFeature
 
+    @OnIo
     override suspend fun doWork(): Result {
-        return withContext(dispatcherProvider.io()) {
-            if (maliciousSiteProtectionFeature.isFeatureEnabled().not() || maliciousSiteProtectionFeature.canUpdateDatasets().not()) {
-                return@withContext Result.success()
-            }
+        if (maliciousSiteProtectionFeature.isFeatureEnabled().not() || maliciousSiteProtectionFeature.canUpdateDatasets().not()) {
+            return Result.success()
+        }
 
-            val feeds = inputData.getStringArray(TYPE)
-                ?.mapNotNull { Feed.fromString(it) }
-                ?.let { feeds ->
-                    if (!maliciousSiteProtectionFeature.scamProtectionEnabled()) {
-                        return@let feeds.filterNot { it == SCAM }
-                    }
-                    feeds
+        val feeds = inputData.getStringArray(TYPE)
+            ?.mapNotNull { Feed.fromString(it) }
+            ?.let { feeds ->
+                if (!maliciousSiteProtectionFeature.scamProtectionEnabled()) {
+                    return@let feeds.filterNot { it == SCAM }
                 }
-                ?.toTypedArray() ?: return@withContext Result.failure()
-
-            if (feeds.isEmpty()) return@withContext Result.success()
-            return@withContext if (maliciousSiteRepository.loadHashPrefixes(*feeds).isSuccess) {
-                Result.success()
-            } else {
-                Result.retry()
+                feeds
             }
+            ?.toTypedArray() ?: return Result.failure()
+
+        if (feeds.isEmpty()) return Result.success()
+        return if (maliciousSiteRepository.loadHashPrefixes(*feeds).isSuccess) {
+            Result.success()
+        } else {
+            Result.retry()
         }
     }
 }

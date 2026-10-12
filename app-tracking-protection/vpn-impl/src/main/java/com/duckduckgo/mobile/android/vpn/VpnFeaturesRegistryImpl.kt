@@ -20,6 +20,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.data.store.api.SharedPreferencesProvider
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.mobile.android.vpn.service.TrackerBlockingVpnService
@@ -89,28 +90,33 @@ class VpnFeaturesRegistryImpl @Inject constructor(
         }
     }
 
-    override suspend fun isFeatureRunning(feature: VpnFeature): Boolean = withContext(dispatcherProvider.io()) {
-        return@withContext isFeatureRegistered(feature) && vpnServiceWrapper.isServiceRunning()
+    @OnIo
+    override suspend fun isFeatureRunning(feature: VpnFeature): Boolean {
+        return isFeatureRegistered(feature) && vpnServiceWrapper.isServiceRunning()
     }
 
-    override suspend fun isFeatureRegistered(feature: VpnFeature): Boolean = withContext(dispatcherProvider.io()) {
-        return@withContext registeredFeatures().contains(feature.featureName)
+    @OnIo
+    override suspend fun isFeatureRegistered(feature: VpnFeature): Boolean {
+        return registeredFeatures().contains(feature.featureName)
     }
 
-    override suspend fun isAnyFeatureRunning(): Boolean = withContext(dispatcherProvider.io()) {
-        return@withContext isAnyFeatureRegistered() && vpnServiceWrapper.isServiceRunning()
+    @OnIo
+    override suspend fun isAnyFeatureRunning(): Boolean {
+        return isAnyFeatureRegistered() && vpnServiceWrapper.isServiceRunning()
     }
 
-    override suspend fun isAnyFeatureRegistered(): Boolean = withContext(dispatcherProvider.io()) {
-        return@withContext registeredFeatures().isNotEmpty()
+    @OnIo
+    override suspend fun isAnyFeatureRegistered(): Boolean {
+        return registeredFeatures().isNotEmpty()
     }
 
     override suspend fun refreshFeature(feature: VpnFeature) = withContext(dispatcherProvider.io()) {
         vpnServiceWrapper.restartVpnService(forceRestart = false)
     }
 
-    override suspend fun getRegisteredFeatures(): List<VpnFeature> = withContext(dispatcherProvider.io()) {
-        return@withContext registeredFeatures().keys.map { VpnFeature { it } }
+    @OnIo
+    override suspend fun getRegisteredFeatures(): List<VpnFeature> {
+        return registeredFeatures().keys.map { VpnFeature { it } }
     }
 
     private fun registeredFeatures(): Map<String, Any?> {

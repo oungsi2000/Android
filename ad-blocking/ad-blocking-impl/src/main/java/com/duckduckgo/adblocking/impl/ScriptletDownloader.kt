@@ -17,10 +17,10 @@
 package com.duckduckgo.adblocking.impl
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.Lazy
-import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
@@ -37,8 +37,9 @@ class RealScriptletDownloader @Inject constructor(
     private val dispatchers: DispatcherProvider,
 ) : ScriptletDownloader {
 
-    override suspend fun download(url: String): Result<ByteArray> = withContext(dispatchers.io()) {
-        runCatching {
+    @OnIo
+    override suspend fun download(url: String): Result<ByteArray> {
+        return runCatching {
             val request = Request.Builder().url(url).build()
             okHttpClient.get().newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {

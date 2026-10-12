@@ -35,6 +35,7 @@ import com.duckduckgo.app.trackerdetection.WebTrackersBlockedHistory
 import com.duckduckgo.browsermode.api.BrowserMode
 import com.duckduckgo.common.utils.DefaultDispatcherProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.extensions.toTldPlusOneOrSelf
 import com.duckduckgo.cookies.api.DuckDuckGoCookieManager
 import com.duckduckgo.duckchat.api.DuckAiHostProvider
@@ -135,11 +136,10 @@ class ClearPersonalDataAction(
         System.exit(0)
     }
 
+    @OnIo
     override suspend fun clearTabsOnly() {
-        withContext(dispatchers.io()) {
-            tabRepository.deleteAll()
-            logcat { "Finished clearing tabs" }
-        }
+        tabRepository.deleteAll()
+        logcat { "Finished clearing tabs" }
     }
 
     override suspend fun clearBrowserDataOnly(shouldFireDataClearPixel: Boolean) {
@@ -256,11 +256,10 @@ class ClearPersonalDataAction(
         return WebStorage.getInstance()
     }
 
+    @OnIo
     override suspend fun setAppUsedSinceLastClearFlag(appUsedSinceLastClear: Boolean) {
-        withContext(dispatchers.io()) {
-            settingsDataStore.appUsedSinceLastClear = appUsedSinceLastClear
-            logcat { "Set appUsedSinceClear flag to $appUsedSinceLastClear" }
-        }
+        settingsDataStore.appUsedSinceLastClear = appUsedSinceLastClear
+        logcat { "Set appUsedSinceClear flag to $appUsedSinceLastClear" }
     }
 
     // Domains whose web storage must never be cleared by the fire button.

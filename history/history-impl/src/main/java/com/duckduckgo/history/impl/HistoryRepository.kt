@@ -17,13 +17,13 @@
 package com.duckduckgo.history.impl
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.history.api.HistoryEntry
 import com.duckduckgo.history.impl.store.HistoryDao
 import com.duckduckgo.history.impl.store.HistoryDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 
 interface HistoryRepository {
@@ -65,6 +65,7 @@ class RealHistoryRepository(
             .map { entries -> entries.mapNotNull { it.toHistoryEntry() } }
             .distinctUntilChanged()
 
+    @OnIo
     override suspend fun saveToHistory(
         url: String,
         title: String?,
@@ -72,64 +73,54 @@ class RealHistoryRepository(
         isSerp: Boolean,
         tabId: String,
     ) {
-        withContext(dispatcherProvider.io()) {
-            historyDao.updateOrInsertVisit(
-                url,
-                title ?: "",
-                query,
-                isSerp,
-                LocalDateTime.now(),
-                tabId,
-            )
-        }
+        historyDao.updateOrInsertVisit(
+            url,
+            title ?: "",
+            query,
+            isSerp,
+            LocalDateTime.now(),
+            tabId,
+        )
     }
 
+    @OnIo
     override suspend fun removeHistoryForTab(tabId: String) {
-        withContext(dispatcherProvider.io()) {
-            historyDao.deleteHistoryForTab(tabId)
-        }
+        historyDao.deleteHistoryForTab(tabId)
     }
 
+    @OnIo
     override suspend fun clearHistory() {
-        withContext(dispatcherProvider.io()) {
-            historyDao.deleteAll()
-        }
+        historyDao.deleteAll()
     }
 
+    @OnIo
     override suspend fun removeHistoryEntryByUrl(url: String) {
-        withContext(dispatcherProvider.io()) {
-            historyDao.deleteEntriesByUrl(url)
-        }
+        historyDao.deleteEntriesByUrl(url)
     }
 
+    @OnIo
     override suspend fun removeHistoryEntryByQuery(query: String) {
-        withContext(dispatcherProvider.io()) {
-            historyDao.deleteEntriesByQuery(query)
-        }
+        historyDao.deleteEntriesByQuery(query)
     }
 
+    @OnIo
     override suspend fun isHistoryUserEnabled(default: Boolean): Boolean {
-        return withContext(dispatcherProvider.io()) {
-            historyDataStore.isHistoryUserEnabled(default)
-        }
+        return historyDataStore.isHistoryUserEnabled(default)
     }
 
+    @OnIo
     override suspend fun setHistoryUserEnabled(value: Boolean) {
-        withContext(dispatcherProvider.io()) {
-            historyDataStore.setHistoryUserEnabled(value)
-        }
+        historyDataStore.setHistoryUserEnabled(value)
     }
 
+    @OnIo
     override suspend fun clearEntriesOlderThan(dateTime: LocalDateTime) {
-        withContext(dispatcherProvider.io()) {
-            historyDao.deleteEntriesOlderThan(dateTime)
-        }
+        historyDao.deleteEntriesOlderThan(dateTime)
     }
 
+    @OnIo
     override suspend fun hasHistory(): Boolean {
-        return withContext(dispatcherProvider.io()) {
-            historyDao.getHistoryEntriesWithVisits()
-                .any { it.toHistoryEntry() != null }
-        }
+        return historyDao.getHistoryEntriesWithVisits()
+            .any { it.toHistoryEntry() != null }
     }
 }

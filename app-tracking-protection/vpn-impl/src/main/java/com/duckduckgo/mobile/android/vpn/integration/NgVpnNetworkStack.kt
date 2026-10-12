@@ -16,6 +16,7 @@
 
 package com.duckduckgo.mobile.android.vpn.integration
 
+import com.duckduckgo.common.utils.LogFailure
 import android.os.ParcelFileDescriptor
 import android.util.LruCache
 import com.duckduckgo.app.di.AppCoroutineScope
@@ -261,9 +262,7 @@ class NgVpnNetworkStack @Inject constructor(
 
             // In this case we don't check for jniContext == 0 and rather runCatching because we want to make sure we stop the tunnelThread
             // if the jniContext is invalid the stop() call should fail, we log and continue
-            runCatching { vpnNetwork.stop(jniContext) }.onFailure {
-                logcat(ERROR) { "Error stopping the VPN network ${it.asLog()}" }
-            }
+            runCatching { vpnNetwork.stop(jniContext) }.onFailure @LogFailure("Error stopping the VPN network ", priority = ERROR) {}
 
             var thread = tunnelThread
             while (thread != null && thread.isAlive) {

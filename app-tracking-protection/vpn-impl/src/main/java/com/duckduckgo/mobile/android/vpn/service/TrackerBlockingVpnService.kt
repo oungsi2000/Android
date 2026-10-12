@@ -40,7 +40,7 @@ import com.duckduckgo.anrs.api.CrashLogger.Crash
 import com.duckduckgo.anvil.annotations.InjectWith
 import com.duckduckgo.appbuildconfig.api.AppBuildConfig
 import com.duckduckgo.appbuildconfig.api.isInternalBuild
-import com.duckduckgo.common.utils.checkMainThread
+import com.duckduckgo.common.utils.CheckNotMainThread
 import com.duckduckgo.common.utils.plugins.PluginPoint
 import com.duckduckgo.di.scopes.VpnScope
 import com.duckduckgo.library.loader.LibraryLoader
@@ -432,9 +432,8 @@ class TrackerBlockingVpnService : VpnService(), CoroutineScope by MainScope(), V
         }
     }
 
+    @CheckNotMainThread
     private fun createNullRouteTempTunnel(): ParcelFileDescriptor? {
-        checkMainThread()
-
         return runCatching {
             Builder().run {
                 allowFamily(AF_INET6)

@@ -63,6 +63,7 @@ import com.duckduckgo.app.widget.ui.WidgetCapabilities
 import com.duckduckgo.appbuildconfig.api.AppBuildConfig
 import com.duckduckgo.browser.feature.toggles.AndroidBrowserConfigFeature
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.plugins.ActivePluginPoint
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.duckchat.api.DuckChat
@@ -1294,11 +1295,11 @@ class NewUserOnboardingPlanProvider @Inject constructor(
     private suspend fun resolveOmnibarType(selected: OmnibarType): OmnibarType =
         if (selected == OmnibarType.SPLIT && !isSplitOmnibarEnabled()) OmnibarType.SINGLE_TOP else selected
 
-    private suspend fun isSplitOmnibarEnabled(): Boolean =
-        withContext(dispatchers.io()) {
-            androidBrowserConfigFeature.splitOmnibar().isEnabled() &&
-                androidBrowserConfigFeature.splitOmnibarWelcomePage().isEnabled()
-        }
+    @OnIo
+    private suspend fun isSplitOmnibarEnabled(): Boolean {
+        return androidBrowserConfigFeature.splitOmnibar().isEnabled() &&
+            androidBrowserConfigFeature.splitOmnibarWelcomePage().isEnabled()
+    }
 
     private enum class FirstDialog {
         SYNC_RESTORE,

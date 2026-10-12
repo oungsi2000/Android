@@ -37,6 +37,7 @@ import com.duckduckgo.common.ui.view.hide
 import com.duckduckgo.common.ui.view.show
 import com.duckduckgo.common.ui.viewbinding.viewBinding
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.edgetoedge.EdgeToEdgeHandler
 import com.duckduckgo.di.scopes.ActivityScope
 import com.duckduckgo.sync.impl.auth.AuthPromptRenderer
@@ -61,7 +62,6 @@ import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import logcat.LogPriority
 import logcat.logcat
 import javax.inject.Inject
@@ -310,8 +310,9 @@ class SyncInternalSettingsActivity : DuckDuckGoActivity() {
         }.getOrElse { "(decode failed: ${it.message})" }
     }
 
-    private suspend fun encodeQrAsync(contents: String): Bitmap? = withContext(dispatcherProvider.io()) {
-        runCatching {
+    @OnIo
+    private suspend fun encodeQrAsync(contents: String): Bitmap? {
+        return runCatching {
             BarcodeEncoder().encodeBitmap(contents, QR_CODE, 400, 400)
         }.getOrElse { e ->
             logcat(LogPriority.ERROR) { "Sync-ScopedToken: failed to encode QR: ${e.message}" }

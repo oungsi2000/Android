@@ -16,6 +16,7 @@
 
 package com.duckduckgo.networkprotection.impl.snooze
 
+import com.duckduckgo.common.utils.LogFailure
 import android.annotation.SuppressLint
 import android.content.*
 import android.telephony.PhoneStateListener
@@ -146,9 +147,7 @@ class VpnCallStateReceiver @Inject constructor(
     private fun registerListener() {
         runCatching {
             currentListener = _listener
-        }.onFailure { t ->
-            logcat(ERROR) { "CALL_STATE error registering: ${t.asLog()}" }
-        }
+        }.onFailure @LogFailure("CALL_STATE error registering: ", priority = ERROR) {}
     }
 
     private fun unregisterListener() {

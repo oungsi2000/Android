@@ -27,6 +27,7 @@ import com.duckduckgo.app.browser.webview.WebViewCompatFeature
 import com.duckduckgo.app.browser.webview.WebViewCompatFeatureSettings
 import com.duckduckgo.browser.api.webviewcompat.WebViewCompatWrapper
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.FragmentScope
 import com.squareup.anvil.annotations.ContributesBinding
 import com.squareup.moshi.Moshi
@@ -179,8 +180,9 @@ class RealWebViewCompatTestHelper @Inject constructor(
         }
     }
 
+    @OnIo
     override suspend fun useBlobDownloadsMessageListener(): Boolean {
-        return withContext(dispatchers.io()) { getWebViewCompatConfig().useBlobDownloadsMessageListener }
+        return getWebViewCompatConfig().useBlobDownloadsMessageListener
     }
 
     @SuppressLint("PostMessageUsage", "RequiresFeature")

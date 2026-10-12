@@ -24,6 +24,7 @@ import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.app.pixels.AppPixelName
 import com.duckduckgo.app.statistics.pixels.Pixel
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.CoroutineScope
@@ -83,11 +84,10 @@ class RoomWebViewSessionStorage @Inject constructor(
         }
     }
 
+    @OnIo
     override suspend fun deleteAllSessions() {
-        withContext(dispatchers.io()) {
-            runCatching { dao.deleteAll() }
-                .onFailure { t -> logcat(WARN) { "Failed to delete all sessions: ${t.asLog()}" } }
-        }
+        runCatching { dao.deleteAll() }
+            .onFailure { t -> logcat(WARN) { "Failed to delete all sessions: ${t.asLog()}" } }
     }
 
     private fun Bundle.toMarshalledBytes(): ByteArray? {

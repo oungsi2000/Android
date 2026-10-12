@@ -72,6 +72,7 @@ import com.duckduckgo.app.statistics.pixels.Pixel.PixelType.Unique
 import com.duckduckgo.appbuildconfig.api.AppBuildConfig
 import com.duckduckgo.browser.feature.toggles.AndroidBrowserConfigFeature
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.device.DeviceInfo
 import com.duckduckgo.di.scopes.FragmentScope
 import com.duckduckgo.duckchat.api.DuckChat
@@ -85,7 +86,6 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import logcat.LogPriority
 import logcat.logcat
@@ -450,15 +450,16 @@ class WelcomePageViewModel @Inject constructor(
         private const val MAX_PAGE_COUNT = 3
     }
 
-    private suspend fun isDuckAiCopyEnabled(): Boolean = withContext(dispatchers.io()) {
-        deviceInfo.language == "en" &&
+    @OnIo
+    private suspend fun isDuckAiCopyEnabled(): Boolean {
+        return deviceInfo.language == "en" &&
             androidBrowserConfigFeature.onboardingDuckAiCopyUpdatesFeb26().isEnabled()
     }
 
-    private suspend fun isAppReinstall(): Boolean =
-        withContext(dispatchers.io()) {
-            appBuildConfig.isAppReinstall()
-        }
+    @OnIo
+    private suspend fun isAppReinstall(): Boolean {
+        return appBuildConfig.isAppReinstall()
+    }
 
     /**
      * @param optionIndex 1, 2 or 3 if the user tapped one of the preset suggestions; null if they submitted a custom query.

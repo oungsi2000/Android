@@ -23,6 +23,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.duckduckgo.app.clipboard.ClipboardInteractor
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.sync.impl.DispatchOutcome
 import com.duckduckgo.sync.impl.QREncoder
 import com.duckduckgo.sync.impl.R
@@ -289,16 +290,18 @@ class DisplayQrCodeViewModel @AssistedInject constructor(
         _viewState.update { it.copy(bitmap = bitmapWithCode) }
     }
 
-    private suspend fun pairingResult(): SyncPairingResult = withContext(dispatchers.io()) {
-        accountRepository
+    @OnIo
+    private suspend fun pairingResult(): SyncPairingResult {
+        return accountRepository
             .getThisConnectedDevice()
             ?.let(ParcelableDevice::fromConnectedDevice)
             ?.let { device -> SyncPairingResult.Success(device, syncEntryPoint) }
             ?: SyncPairingResult.Failure
     }
 
-    private suspend fun protocolVersion(): ProtocolVersion = withContext(dispatchers.io()) {
-        if (syncFeature.canUseV2ConnectFlow().isEnabled() && syncFeature.canShowV2ConnectCode().isEnabled()) {
+    @OnIo
+    private suspend fun protocolVersion(): ProtocolVersion {
+        return if (syncFeature.canUseV2ConnectFlow().isEnabled() && syncFeature.canShowV2ConnectCode().isEnabled()) {
             ProtocolVersion.V2
         } else {
             ProtocolVersion.V1

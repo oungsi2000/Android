@@ -27,6 +27,7 @@ import com.duckduckgo.app.statistics.wideevents.FlowStatus
 import com.duckduckgo.app.statistics.wideevents.WideEventClient
 import com.duckduckgo.browser.api.wideevents.BrowserInteractionsPlugin
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.newtabpage.api.interactions.HatchInteractionsPlugin
 import com.squareup.anvil.annotations.ContributesBinding
@@ -41,7 +42,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import javax.inject.Inject
 import kotlin.time.Duration
@@ -332,8 +332,9 @@ class RealReturnSessionWideEvent @Inject constructor(
         return true
     }
 
-    private suspend fun isFeatureEnabled(): Boolean = withContext(dispatchers.io()) {
-        returnSessionWideEventFeature.get().self().isEnabled()
+    @OnIo
+    private suspend fun isFeatureEnabled(): Boolean {
+        return returnSessionWideEventFeature.get().self().isEnabled()
     }
 
     private class SessionState(

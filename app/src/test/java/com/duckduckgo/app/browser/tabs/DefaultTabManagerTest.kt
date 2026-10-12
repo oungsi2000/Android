@@ -19,6 +19,8 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
@@ -30,7 +32,11 @@ class DefaultTabManagerTest {
     @get:Rule
     val coroutineTestRule = CoroutineTestRule()
 
-    private val tabRepository: TabRepository = mock()
+    // openNewTab returns the id of the tab the repository created
+    private val tabRepository: TabRepository = mock {
+        onBlocking { add(anyOrNull(), any()) } doReturn "newTabId"
+        onBlocking { addFromSourceTab(anyOrNull(), any(), any()) } doReturn "newTabId"
+    }
     private val omnibarEntryConverter: OmnibarEntryConverter = mock()
     private val skipUrlConversionOnNewTabFeature = FakeFeatureToggleFactory.create(SkipUrlConversionOnNewTabFeature::class.java)
     private val duckAiSessionCallback: DuckAiSessionCallback = mock()

@@ -20,12 +20,12 @@ import com.duckduckgo.autofill.impl.jsbridge.request.AutofillJsonRequestParser.A
 import com.duckduckgo.autofill.impl.jsbridge.request.AutofillJsonRequestParser.AutofillStoreFormDataJsonRequest
 import com.duckduckgo.autofill.impl.jsbridge.request.FormSubmissionTriggerType.UNKNOWN
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapters.EnumJsonAdapter
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.WARN
 import logcat.asLog
 import logcat.logcat
@@ -51,35 +51,33 @@ class AutofillJsonRequestParser @Inject constructor(
             .build()
     }
 
+    @OnIo
     override suspend fun parseAutofillDataRequest(request: String): Result<AutofillDataRequest> {
-        return withContext(dispatchers.io()) {
-            val result = kotlin.runCatching {
-                autofillDataRequestParser.fromJson(request)
-            }
-                .onFailure { logcat(WARN) { "Failed to parse autofill JSON for AutofillDataRequest ${it.asLog()}\n$request" } }
-                .getOrNull()
+        val result = kotlin.runCatching {
+            autofillDataRequestParser.fromJson(request)
+        }
+            .onFailure { logcat(WARN) { "Failed to parse autofill JSON for AutofillDataRequest ${it.asLog()}\n$request" } }
+            .getOrNull()
 
-            return@withContext if (result == null) {
-                Result.failure(IllegalArgumentException("Failed to parse autofill JSON for AutofillDataRequest"))
-            } else {
-                Result.success(result)
-            }
+        return if (result == null) {
+            Result.failure(IllegalArgumentException("Failed to parse autofill JSON for AutofillDataRequest"))
+        } else {
+            Result.success(result)
         }
     }
 
+    @OnIo
     override suspend fun parseStoreFormDataRequest(request: String): Result<AutofillStoreFormDataRequest> {
-        return withContext(dispatchers.io()) {
-            val result = kotlin.runCatching {
-                autofillStoreFormDataRequestParser.fromJson(request)
-            }
-                .onFailure { logcat(WARN) { "Failed to parse autofill JSON for AutofillStoreFormDataRequest: ${it.asLog()}" } }
-                .getOrNull()
+        val result = kotlin.runCatching {
+            autofillStoreFormDataRequestParser.fromJson(request)
+        }
+            .onFailure { logcat(WARN) { "Failed to parse autofill JSON for AutofillStoreFormDataRequest: ${it.asLog()}" } }
+            .getOrNull()
 
-            return@withContext if (result == null) {
-                Result.failure(IllegalArgumentException("Failed to parse autofill JSON for AutofillStoreFormDataRequest"))
-            } else {
-                Result.success(result.mapToPublicType())
-            }
+        return if (result == null) {
+            Result.failure(IllegalArgumentException("Failed to parse autofill JSON for AutofillStoreFormDataRequest"))
+        } else {
+            Result.success(result.mapToPublicType())
         }
     }
 

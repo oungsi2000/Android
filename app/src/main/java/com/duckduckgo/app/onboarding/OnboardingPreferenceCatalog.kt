@@ -22,6 +22,7 @@ import com.duckduckgo.app.browser.R
 import com.duckduckgo.app.onboarding.ui.page.configdriven.ContentConfig
 import com.duckduckgo.app.onboarding.ui.page.configdriven.TextConfig
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.plugins.ActivePluginPoint
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.history.api.NavigationHistory
@@ -36,7 +37,6 @@ import com.duckduckgo.settings.api.setSetting
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
@@ -63,16 +63,17 @@ class OnboardingPreferenceCatalogImpl @Inject constructor(
     private val dispatcherProvider: DispatcherProvider,
 ) : OnboardingPreferenceCatalog {
 
-    override suspend fun offer(preferences: List<OnboardingPreference>): List<ContentConfig.PreferenceSelector.Row> =
-        withContext(dispatcherProvider.io()) {
-            val rows = preferences.mapNotNull { definitions.getValue(it).row(it) }
+    @OnIo
+    override suspend fun offer(preferences: List<OnboardingPreference>): List<ContentConfig.PreferenceSelector.Row> {
+        val rows = preferences.mapNotNull { definitions.getValue(it).row(it) }
 
-            // Only offer a preference if it has no dependency or its dependency is also offered.
-            val offered = rows.map { it.preference }.toSet()
-            rows.filter { it.dependsOn == null || it.dependsOn in offered }
-        }
+        // Only offer a preference if it has no dependency or its dependency is also offered.
+        val offered = rows.map { it.preference }.toSet()
+        return rows.filter { it.dependsOn == null || it.dependsOn in offered }
+    }
 
-    override suspend fun apply(selections: Map<OnboardingPreference, Boolean>): Unit = withContext(dispatcherProvider.io()) {
+    @OnIo
+    override suspend fun apply(selections: Map<OnboardingPreference, Boolean>) {
         selections.forEach { (preference, enabled) -> definitions.getValue(preference).apply(enabled) }
     }
 

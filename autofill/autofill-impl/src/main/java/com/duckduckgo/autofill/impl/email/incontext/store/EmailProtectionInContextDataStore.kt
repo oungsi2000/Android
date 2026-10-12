@@ -20,6 +20,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
@@ -44,9 +45,10 @@ class RealEmailProtectionInContextDataStore @Inject constructor(
 
     private val preferences: SharedPreferences by lazy { context.getSharedPreferences(FILENAME, Context.MODE_PRIVATE) }
 
-    override suspend fun timestampUserChoseNeverAskAgain(): Long? = withContext(dispatchers.io()) {
+    @OnIo
+    override suspend fun timestampUserChoseNeverAskAgain(): Long? {
         val timestamp = preferences.getLong(KEY_USER_CHOSE_NEVER_ASK_AGAIN, -1)
-        return@withContext if (timestamp == -1L) null else timestamp
+        return if (timestamp == -1L) null else timestamp
     }
 
     override suspend fun onUserChoseNeverAskAgain() {
@@ -61,8 +63,9 @@ class RealEmailProtectionInContextDataStore @Inject constructor(
         update { putInt(KEY_MAXIMUM_REQUIRED_INSTALL_DAYS, installDays) }
     }
 
-    override suspend fun getMaximumPermittedDaysSinceInstallation(): Int = withContext(dispatchers.io()) {
-        preferences.getInt(KEY_MAXIMUM_REQUIRED_INSTALL_DAYS, -1)
+    @OnIo
+    override suspend fun getMaximumPermittedDaysSinceInstallation(): Int {
+        return preferences.getInt(KEY_MAXIMUM_REQUIRED_INSTALL_DAYS, -1)
     }
 
     private suspend inline fun update(crossinline block: SharedPreferences.Editor.() -> Unit) {

@@ -18,6 +18,7 @@ package com.duckduckgo.pir.impl.pixels
 
 import com.duckduckgo.common.utils.CurrentTimeProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.pir.impl.store.PirRepository
 import com.squareup.anvil.annotations.ContributesBinding
@@ -25,7 +26,6 @@ import dagger.SingleInstanceIn
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
@@ -53,13 +53,12 @@ class RealPirInteractionReporter @Inject constructor(
 
     private val mutex = Mutex()
 
+    @OnIo
     override suspend fun attemptFirePixel() {
-        withContext(dispatcherProvider.io()) {
-            val nowMs = currentTimeProvider.currentTimeMillis()
-            attemptToFireDauPixel(nowMs)
-            attemptToFireWauPixel(nowMs)
-            attemptToFireMauPixel(nowMs)
-        }
+        val nowMs = currentTimeProvider.currentTimeMillis()
+        attemptToFireDauPixel(nowMs)
+        attemptToFireWauPixel(nowMs)
+        attemptToFireMauPixel(nowMs)
     }
 
     private suspend fun attemptToFireDauPixel(nowMs: Long) {

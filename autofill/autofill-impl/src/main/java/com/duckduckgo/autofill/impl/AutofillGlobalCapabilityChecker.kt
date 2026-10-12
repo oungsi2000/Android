@@ -21,9 +21,9 @@ import com.duckduckgo.autofill.api.InternalTestUserChecker
 import com.duckduckgo.autofill.impl.deviceauth.DeviceAuthenticator
 import com.duckduckgo.autofill.impl.store.InternalAutofillStore
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface AutofillGlobalCapabilityChecker {
@@ -42,28 +42,25 @@ class AutofillGlobalCapabilityCheckerImpl @Inject constructor(
     private val dispatcherProvider: DispatcherProvider,
 ) : AutofillGlobalCapabilityChecker {
 
+    @OnIo
     override suspend fun isSecureAutofillAvailable(): Boolean {
-        return withContext(dispatcherProvider.io()) {
-            if (!autofillStore.autofillAvailable()) return@withContext false
-            if (deviceAuthenticator.isAuthenticationRequiredForAutofill() && !deviceAuthenticator.hasValidDeviceAuthentication()) {
-                return@withContext false
-            }
-            return@withContext true
+        if (!autofillStore.autofillAvailable()) return false
+        if (deviceAuthenticator.isAuthenticationRequiredForAutofill() && !deviceAuthenticator.hasValidDeviceAuthentication()) {
+            return false
         }
+        return true
     }
 
+    @OnIo
     override suspend fun isAutofillEnabledByConfiguration(url: String): Boolean {
-        return withContext(dispatcherProvider.io()) {
-            val enabledAtTopLevel = isInternalTester() || isGlobalFeatureEnabled()
-            val canIntegrateAutofill = autofillFeature.canIntegrateAutofillInWebView().isEnabled()
-            enabledAtTopLevel && canIntegrateAutofill && !isAnException(url)
-        }
+        val enabledAtTopLevel = isInternalTester() || isGlobalFeatureEnabled()
+        val canIntegrateAutofill = autofillFeature.canIntegrateAutofillInWebView().isEnabled()
+        return enabledAtTopLevel && canIntegrateAutofill && !isAnException(url)
     }
 
+    @OnIo
     override suspend fun isAutofillEnabledByUser(): Boolean {
-        return withContext(dispatcherProvider.io()) {
-            autofillStore.autofillEnabled
-        }
+        return autofillStore.autofillEnabled
     }
 
     private fun isAnException(url: String): Boolean = autofill.isAnException(url)

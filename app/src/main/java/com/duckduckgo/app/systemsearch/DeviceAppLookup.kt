@@ -22,9 +22,9 @@ import android.content.pm.PackageManager
 import android.content.pm.PackageManager.GET_META_DATA
 import android.graphics.drawable.Drawable
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import kotlin.text.RegexOption.IGNORE_CASE
 
 data class DeviceApp(
@@ -54,8 +54,9 @@ class InstalledDeviceAppLookup(
 
     private val refreshMutex = Mutex()
 
-    override suspend fun query(query: String): List<DeviceApp> = withContext(dispatcherProvider.io()) {
-        if (query.isBlank()) return@withContext emptyList()
+    @OnIo
+    override suspend fun query(query: String): List<DeviceApp> {
+        if (query.isBlank()) return emptyList()
 
         val apps = refreshMutex.withLock {
             cachedApps ?: run {
@@ -67,7 +68,7 @@ class InstalledDeviceAppLookup(
 
         val escapedQuery = Regex.escape(query)
         val wordPrefixMatchingRegex = ".*\\b$escapedQuery.*".toRegex(IGNORE_CASE)
-        apps.filter {
+        return apps.filter {
             it.shortName.matches(wordPrefixMatchingRegex)
         }.sortedWith(comparator(query))
     }
@@ -80,8 +81,9 @@ class InstalledDeviceAppLookup(
         }
     }
 
-    override suspend fun refreshAppList(): List<DeviceApp> = withContext(dispatcherProvider.io()) {
-        refreshMutex.withLock {
+    @OnIo
+    override suspend fun refreshAppList(): List<DeviceApp> {
+        return refreshMutex.withLock {
             appListProvider.get().also {
                 cachedApps = it
             }
@@ -99,10 +101,11 @@ class InstalledDeviceAppListProvider(
     private val dispatcherProvider: DispatcherProvider,
 ) : DeviceAppListProvider {
 
-    override suspend fun get(): List<DeviceApp> = withContext(dispatcherProvider.io()) {
+    @OnIo
+    override suspend fun get(): List<DeviceApp> {
         val appsInfo = packageManager.getInstalledApplications(GET_META_DATA)
 
-        appsInfo.map {
+        return appsInfo.map {
             val packageName = it.packageName
             val launchIntent = packageManager.getLaunchIntentForPackage(packageName) ?: return@map null
             val shortName = it.loadLabel(packageManager).toString()

@@ -24,6 +24,7 @@ import com.android.billingclient.api.Purchase
 import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.subscriptions.impl.SubscriptionTier
 import com.duckduckgo.subscriptions.impl.SubscriptionsConstants.ADVANCED_SUBSCRIPTION
@@ -414,10 +415,11 @@ class RealPlayBillingManager @Inject constructor(
         }
     }
 
-    override suspend fun getLatestPurchase(): LatestPurchaseResult = withContext(dispatcherProvider.io()) {
-        if (!billingClient.ready) return@withContext LatestPurchaseResult.Unknown(cause = "billing_client_not_ready")
+    @OnIo
+    override suspend fun getLatestPurchase(): LatestPurchaseResult {
+        if (!billingClient.ready) return LatestPurchaseResult.Unknown(cause = "billing_client_not_ready")
 
-        when (val result = billingClient.queryPurchases()) {
+        return when (val result = billingClient.queryPurchases()) {
             is QueryPurchasesResult.Success -> {
                 val latest = result.purchases
                     .filter { purchase ->

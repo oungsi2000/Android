@@ -17,9 +17,26 @@
 package com.duckduckgo.common.utils
 
 import android.os.Looper
+import io.github.molelabs.aspectk.runtime.Aspect
+import io.github.molelabs.aspectk.runtime.Before
+import io.github.molelabs.aspectk.runtime.JoinPoint
 
 fun checkMainThread() {
     check(Looper.myLooper() != Looper.getMainLooper()) {
         "Not expected to be called on the main thread but was "
     }
+}
+
+/**
+ * Makes the annotated function throw when it is called on the main thread.
+ * The module declaring the function must apply the `io.github.mole-labs.aspectk` plugin.
+ */
+@Target(AnnotationTarget.FUNCTION)
+@Retention(AnnotationRetention.BINARY)
+annotation class CheckNotMainThread
+
+@Aspect
+object CheckNotMainThreadAspect {
+    @Before(CheckNotMainThread::class)
+    fun check(joinPoint: JoinPoint) = checkMainThread()
 }

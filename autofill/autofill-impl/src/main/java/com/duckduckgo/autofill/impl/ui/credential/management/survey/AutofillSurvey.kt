@@ -25,10 +25,10 @@ import com.duckduckgo.autofill.impl.store.InternalAutofillStore
 import com.duckduckgo.autofill.impl.ui.credential.management.survey.AutofillSurveyImpl.Companion.SurveyParams.IN_APP
 import com.duckduckgo.browser.api.UserBrowserProperties
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.withContext
 import java.util.*
 import javax.inject.Inject
 
@@ -50,12 +50,11 @@ class AutofillSurveyImpl @Inject constructor(
     private val passwordBucketing: AutofillEngagementBucketing,
 ) : AutofillSurvey {
 
+    @OnIo
     override suspend fun firstUnusedSurvey(): SurveyDetails? {
-        return withContext(dispatchers.io()) {
-            if (!canShowSurvey()) return@withContext null
-            val survey = autofillSurveyStore.availableSurveys().firstOrNull { !surveyTakenPreviously(it.id) } ?: return@withContext null
-            return@withContext survey.copy(url = survey.url.addSurveyParameters())
-        }
+        if (!canShowSurvey()) return null
+        val survey = autofillSurveyStore.availableSurveys().firstOrNull { !surveyTakenPreviously(it.id) } ?: return null
+        return survey.copy(url = survey.url.addSurveyParameters())
     }
 
     private fun canShowSurvey(): Boolean {
@@ -74,25 +73,24 @@ class AutofillSurveyImpl @Inject constructor(
         return autofillSurveyStore.hasSurveyBeenTaken(surveyId)
     }
 
+    @OnIo
     private suspend fun String.addSurveyParameters(): String {
-        return withContext(dispatchers.io()) {
-            val passwordsSaved = internalAutofillStore.getCredentialCount().firstOrNull()?.getOrThrow() ?: 0
+        val passwordsSaved = internalAutofillStore.getCredentialCount().firstOrNull()?.getOrThrow() ?: 0
 
-            val urlBuilder = toUri()
-                .buildUpon()
-                .appendQueryParameter(SurveyParams.ATB, statisticsStore.atb?.version ?: "")
-                .appendQueryParameter(SurveyParams.ATB_VARIANT, statisticsStore.variant)
-                .appendQueryParameter(SurveyParams.DAYS_INSTALLED, "${userBrowserProperties.daysSinceInstalled()}")
-                .appendQueryParameter(SurveyParams.ANDROID_VERSION, "${appBuildConfig.sdkInt}")
-                .appendQueryParameter(SurveyParams.APP_VERSION, appBuildConfig.versionName)
-                .appendQueryParameter(SurveyParams.MANUFACTURER, appBuildConfig.manufacturer)
-                .appendQueryParameter(SurveyParams.MODEL, appBuildConfig.model)
-                .appendQueryParameter(SurveyParams.SOURCE, IN_APP)
-                .appendQueryParameter(SurveyParams.LAST_ACTIVE_DATE, appDaysUsedRepository.getLastActiveDay())
-                .appendQueryParameter(SurveyParams.NUMBER_PASSWORDS, passwordBucketing.bucketNumberOfCredentials(passwordsSaved))
+        val urlBuilder = toUri()
+            .buildUpon()
+            .appendQueryParameter(SurveyParams.ATB, statisticsStore.atb?.version ?: "")
+            .appendQueryParameter(SurveyParams.ATB_VARIANT, statisticsStore.variant)
+            .appendQueryParameter(SurveyParams.DAYS_INSTALLED, "${userBrowserProperties.daysSinceInstalled()}")
+            .appendQueryParameter(SurveyParams.ANDROID_VERSION, "${appBuildConfig.sdkInt}")
+            .appendQueryParameter(SurveyParams.APP_VERSION, appBuildConfig.versionName)
+            .appendQueryParameter(SurveyParams.MANUFACTURER, appBuildConfig.manufacturer)
+            .appendQueryParameter(SurveyParams.MODEL, appBuildConfig.model)
+            .appendQueryParameter(SurveyParams.SOURCE, IN_APP)
+            .appendQueryParameter(SurveyParams.LAST_ACTIVE_DATE, appDaysUsedRepository.getLastActiveDay())
+            .appendQueryParameter(SurveyParams.NUMBER_PASSWORDS, passwordBucketing.bucketNumberOfCredentials(passwordsSaved))
 
-            urlBuilder.build().toString()
-        }
+        return urlBuilder.build().toString()
     }
 
     companion object {

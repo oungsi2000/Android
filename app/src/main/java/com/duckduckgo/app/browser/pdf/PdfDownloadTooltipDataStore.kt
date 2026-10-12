@@ -21,11 +21,11 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface PdfDownloadTooltipDataStore {
@@ -44,17 +44,17 @@ class SharedPreferencesPdfDownloadTooltipDataStore @Inject constructor(
         val SHOWN_COUNT_KEY = intPreferencesKey(name = "PDF_DOWNLOAD_TOOLTIP_SHOWN_COUNT")
     }
 
+    @OnIo
     override suspend fun incrementShownCount() {
-        withContext(dispatchers.io()) {
-            dataStore.edit { prefs ->
-                prefs[Keys.SHOWN_COUNT_KEY] = (prefs[Keys.SHOWN_COUNT_KEY] ?: 0) + 1
-            }
+        dataStore.edit { prefs ->
+            prefs[Keys.SHOWN_COUNT_KEY] = (prefs[Keys.SHOWN_COUNT_KEY] ?: 0) + 1
         }
     }
 
-    override suspend fun canShow(): Boolean = withContext(dispatchers.io()) {
+    @OnIo
+    override suspend fun canShow(): Boolean {
         val count = dataStore.data.firstOrNull()?.let { it[Keys.SHOWN_COUNT_KEY] } ?: 0
-        count < MAX_SHOWN_COUNT
+        return count < MAX_SHOWN_COUNT
     }
 
     private companion object {

@@ -22,6 +22,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.duckchat.impl.contextual.ContextualEntryPromptStore
 import com.duckduckgo.duckchat.impl.di.DuckChat
@@ -33,7 +34,6 @@ import dagger.SingleInstanceIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface DuckChatContextualDataStore {
@@ -79,42 +79,38 @@ class RealDuckChatContextualDataStore @Inject constructor(
             ),
         )
 
+    @OnIo
     override suspend fun persistTabChatUrl(tabId: String, url: String) {
-        withContext(dispatchers.io()) {
-            store.edit { prefs ->
-                val updated =
-                    load(prefs[Keys.TAB_CHAT_URLS])
-                        .toMutableMap()
-                        .apply { this[tabId] = url }
-                prefs[Keys.TAB_CHAT_URLS] = mapAdapter.toJson(updated)
-            }
+        store.edit { prefs ->
+            val updated =
+                load(prefs[Keys.TAB_CHAT_URLS])
+                    .toMutableMap()
+                    .apply { this[tabId] = url }
+            prefs[Keys.TAB_CHAT_URLS] = mapAdapter.toJson(updated)
         }
     }
 
+    @OnIo
     override suspend fun getTabChatUrl(tabId: String): String? {
-        return withContext(dispatchers.io()) {
-            val prefs = store.data.firstOrNull()
-            load(prefs?.get(Keys.TAB_CHAT_URLS))[tabId]
-        }
+        val prefs = store.data.firstOrNull()
+        return load(prefs?.get(Keys.TAB_CHAT_URLS))[tabId]
     }
 
+    @OnIo
     override suspend fun persistTabClosedTimestamp(tabId: String, timestampMs: Long) {
-        withContext(dispatchers.io()) {
-            store.edit { prefs ->
-                val updated =
-                    loadTimestamps(prefs[Keys.TAB_CLOSE_TIMESTAMPS])
-                        .toMutableMap()
-                        .apply { this[tabId] = timestampMs }
-                prefs[Keys.TAB_CLOSE_TIMESTAMPS] = timestampMapAdapter.toJson(updated)
-            }
+        store.edit { prefs ->
+            val updated =
+                loadTimestamps(prefs[Keys.TAB_CLOSE_TIMESTAMPS])
+                    .toMutableMap()
+                    .apply { this[tabId] = timestampMs }
+            prefs[Keys.TAB_CLOSE_TIMESTAMPS] = timestampMapAdapter.toJson(updated)
         }
     }
 
+    @OnIo
     override suspend fun getTabClosedTimestamp(tabId: String): Long? {
-        return withContext(dispatchers.io()) {
-            val prefs = store.data.firstOrNull()
-            loadTimestamps(prefs?.get(Keys.TAB_CLOSE_TIMESTAMPS))[tabId]
-        }
+        val prefs = store.data.firstOrNull()
+        return loadTimestamps(prefs?.get(Keys.TAB_CLOSE_TIMESTAMPS))[tabId]
     }
 
     override fun clearTabChatUrl(tabId: String) {

@@ -35,6 +35,7 @@ import com.duckduckgo.browsermode.api.BrowserMode
 import com.duckduckgo.browsermode.api.BrowserModeDataProvider
 import com.duckduckgo.browsermode.api.BrowserModeStateHolder
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.customtabs.api.CustomTabDetector
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.duckchat.api.DuckAiSessionCallback
@@ -44,7 +45,6 @@ import com.squareup.anvil.annotations.ContributesMultibinding
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import javax.inject.Inject
 
@@ -194,15 +194,17 @@ class FirstScreenHandlerImpl @Inject constructor(
         return ReturnSessionLandingResult(afterIdle = afterIdle, landing = landing)
     }
 
-    private suspend fun isVoiceSessionActiveOnCurrentTab(): Boolean = withContext(dispatcherProvider.io()) {
+    @OnIo
+    private suspend fun isVoiceSessionActiveOnCurrentTab(): Boolean {
         val selectedTab = tabRepository.getSelectedTab()
-        return@withContext selectedTab?.tabId?.let {
+        return selectedTab?.tabId?.let {
             duckChat.isVoiceChatSessionActive(it)
         } == true
     }
 
-    private suspend fun isActiveTabCustomTab(): Boolean = withContext(dispatcherProvider.io()) {
-        return@withContext customTabDetector.isCustomTab()
+    @OnIo
+    private suspend fun isActiveTabCustomTab(): Boolean {
+        return customTabDetector.isCustomTab()
     }
 
     override fun onClose() {

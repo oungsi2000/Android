@@ -33,6 +33,7 @@ import com.duckduckgo.browsermode.api.BrowserMode
 import com.duckduckgo.common.utils.AppUrl
 import com.duckduckgo.common.utils.AppUrl.ParamKey.QUERY
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.cookies.api.CookieManagerProvider
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.duckchat.api.DuckAiFeatureState
@@ -581,11 +582,10 @@ class RealDuckChat @Inject constructor(
             cacheUserSettings()
         }
 
+    @OnIo
     override suspend fun setAutomaticPageContextUserSetting(isEnabled: Boolean) {
-        withContext(dispatchers.io()) {
-            duckChatFeatureRepository.setAutomaticPageContextAttachment(isEnabled)
-            cacheUserSettings()
-        }
+        duckChatFeatureRepository.setAutomaticPageContextAttachment(isEnabled)
+        cacheUserSettings()
     }
 
     override fun isEnabled(): Boolean = isDuckChatFeatureEnabled && isDuckChatUserEnabled
@@ -958,8 +958,9 @@ class RealDuckChat @Inject constructor(
 
     override fun endVoiceChatSession(tabId: String) = voiceSessionStateManager.triggerVoiceSessionEnd(tabId)
 
-    override suspend fun isChatHistoryAvailable(): Boolean = withContext(dispatchers.io()) {
-        isEnabled() &&
+    @OnIo
+    override suspend fun isChatHistoryAvailable(): Boolean {
+        return isEnabled() &&
             duckChatFeature.useNativeStorageChatData().isEnabled()
     }
 

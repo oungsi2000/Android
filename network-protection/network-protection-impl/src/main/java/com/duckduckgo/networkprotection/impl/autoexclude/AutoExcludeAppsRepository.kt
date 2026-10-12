@@ -20,6 +20,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.extensions.safeGetInstalledApplications
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.networkprotection.store.db.AutoExcludeDao
@@ -33,7 +34,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface AutoExcludeAppsRepository {
@@ -102,12 +102,11 @@ class RealAutoExcludeAppsRepository @Inject constructor(
         autoExcludeDao.getAutoExcludeApps()
     }
 
+    @OnIo
     override suspend fun getAppsForAutoExcludePrompt(): List<VpnIncompatibleApp> {
-        return withContext(dispatcherProvider.io()) {
-            getInstalledIncompatibleApps().filter {
-                !autoExcludeDao.getFlaggedIncompatibleApps().any { flaggedIncompatibleApp ->
-                    it.packageName == flaggedIncompatibleApp.packageName
-                }
+        return getInstalledIncompatibleApps().filter {
+            !autoExcludeDao.getFlaggedIncompatibleApps().any { flaggedIncompatibleApp ->
+                it.packageName == flaggedIncompatibleApp.packageName
             }
         }
     }
@@ -134,20 +133,18 @@ class RealAutoExcludeAppsRepository @Inject constructor(
         }
     }
 
+    @OnIo
     override suspend fun getInstalledIncompatibleApps(): List<VpnIncompatibleApp> {
-        return withContext(dispatcherProvider.io()) {
-            val installedApps = packageManager.safeGetInstalledApplications(context).map { it.packageName }
+        val installedApps = packageManager.safeGetInstalledApplications(context).map { it.packageName }
 
-            autoExcludeList.await().filter {
-                installedApps.contains(it.packageName)
-            }
+        return autoExcludeList.await().filter {
+            installedApps.contains(it.packageName)
         }
     }
 
+    @OnIo
     override suspend fun getAllIncompatibleApps(): List<VpnIncompatibleApp> {
-        return withContext(dispatcherProvider.io()) {
-            autoExcludeList.await()
-        }
+        return autoExcludeList.await()
     }
 
     override fun getAllIncompatibleAppPackagesFlow(): Flow<List<String>> {
@@ -156,9 +153,8 @@ class RealAutoExcludeAppsRepository @Inject constructor(
         }
     }
 
+    @OnIo
     override suspend fun isAppMarkedAsIncompatible(appPackage: String): Boolean {
-        return withContext(dispatcherProvider.io()) {
-            getAllIncompatibleApps().any { it.packageName == appPackage }
-        }
+        return getAllIncompatibleApps().any { it.packageName == appPackage }
     }
 }

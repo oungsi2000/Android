@@ -34,6 +34,7 @@ import com.duckduckgo.browser.api.WebViewVersionProvider
 import com.duckduckgo.browser.feature.toggles.AndroidBrowserConfigFeature
 import com.duckduckgo.browsermode.api.BrowserMode
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.customtabs.api.CustomTabDetector
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.verifiedinstallation.IsVerifiedPlayStoreInstall
@@ -41,7 +42,6 @@ import com.squareup.anvil.annotations.ContributesMultibinding
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.INFO
 import logcat.LogPriority.VERBOSE
 import logcat.logcat
@@ -131,29 +131,28 @@ class EnqueuedPixelWorker @Inject constructor(
         return (applicationId == "com.duckduckgo.mobile.android" || applicationId == "com.duckduckgo.mobile.android.debug").toString()
     }
 
+    @OnIo
     suspend fun submitUnsentFirePixels() {
-        withContext(dispatchers.io()) {
-            val pendingPixelCounts = unsentForgetAllPixelStore.pendingPixelCountsClearData
-            logcat(INFO) { "Found ${pendingPixelCounts.values.sum()} unsent clear data pixels" }
-            if (pendingPixelCounts.values.any { it > 0 }) {
-                pixel.get().fire(
-                    AppPixelName.FORGET_ALL_EXECUTED_DAILY,
-                    type = Pixel.PixelType.Daily(),
-                )
+        val pendingPixelCounts = unsentForgetAllPixelStore.pendingPixelCountsClearData
+        logcat(INFO) { "Found ${pendingPixelCounts.values.sum()} unsent clear data pixels" }
+        if (pendingPixelCounts.values.any { it > 0 }) {
+            pixel.get().fire(
+                AppPixelName.FORGET_ALL_EXECUTED_DAILY,
+                type = Pixel.PixelType.Daily(),
+            )
+        }
+        pendingPixelCounts.forEach { (mode, count) ->
+            if (count <= 0) return@forEach
+            val params = mapOf(Pixel.PixelParameter.BROWSER_MODE to mode.name.lowercase())
+            for (i in 1..count) {
+                pixel.get().fire(AppPixelName.FORGET_ALL_EXECUTED, params)
             }
-            pendingPixelCounts.forEach { (mode, count) ->
-                if (count <= 0) return@forEach
-                val params = mapOf(Pixel.PixelParameter.BROWSER_MODE to mode.name.lowercase())
-                for (i in 1..count) {
-                    pixel.get().fire(AppPixelName.FORGET_ALL_EXECUTED, params)
-                }
-                val dailyPixel = when (mode) {
-                    BrowserMode.REGULAR -> AppPixelName.FORGET_ALL_EXECUTED_REGULAR_DAILY
-                    BrowserMode.FIRE -> AppPixelName.FORGET_ALL_EXECUTED_FIRE_DAILY
-                }
-                pixel.get().fire(dailyPixel, type = Pixel.PixelType.Daily())
-                unsentForgetAllPixelStore.resetCount(mode)
+            val dailyPixel = when (mode) {
+                BrowserMode.REGULAR -> AppPixelName.FORGET_ALL_EXECUTED_REGULAR_DAILY
+                BrowserMode.FIRE -> AppPixelName.FORGET_ALL_EXECUTED_FIRE_DAILY
             }
+            pixel.get().fire(dailyPixel, type = Pixel.PixelType.Daily())
+            unsentForgetAllPixelStore.resetCount(mode)
         }
     }
 

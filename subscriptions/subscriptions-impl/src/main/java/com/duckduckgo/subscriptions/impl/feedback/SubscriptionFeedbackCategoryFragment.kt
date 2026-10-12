@@ -24,6 +24,7 @@ import androidx.lifecycle.withStarted
 import com.duckduckgo.anvil.annotations.InjectWith
 import com.duckduckgo.common.ui.viewbinding.viewBinding
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.FragmentScope
 import com.duckduckgo.pir.api.PirFeature
 import com.duckduckgo.pir.api.dashboard.PirFeatureState
@@ -41,7 +42,6 @@ import com.duckduckgo.subscriptions.impl.feedback.SubscriptionFeedbackCategory.V
 import com.duckduckgo.subscriptions.impl.repository.AuthRepository
 import com.duckduckgo.subscriptions.impl.repository.toProductList
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @InjectWith(FragmentScope::class)
@@ -103,9 +103,10 @@ class SubscriptionFeedbackCategoryFragment : SubscriptionFeedbackFragment(R.layo
         return (pirFeature.getPirFeatureState() == PirFeatureState.ENABLED || subscription.productId in listOf(MONTHLY_PLAN_US, YEARLY_PLAN_US))
     }
 
-    private suspend fun isDuckAiAvailable(): Boolean = withContext(dispatcherProvider.io()) {
+    @OnIo
+    private suspend fun isDuckAiAvailable(): Boolean {
         val isDuckAiEnabled = subscriptionFeature.duckAiPlus().isEnabled()
-        isDuckAiEnabled && authRepository.getEntitlements().toProductList().any { it == Product.DuckAiPlus }
+        return isDuckAiEnabled && authRepository.getEntitlements().toProductList().any { it == Product.DuckAiPlus }
     }
 
     interface Listener {

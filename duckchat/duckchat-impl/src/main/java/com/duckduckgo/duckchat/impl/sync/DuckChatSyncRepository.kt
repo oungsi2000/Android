@@ -18,6 +18,7 @@ package com.duckduckgo.duckchat.impl.sync
 
 import com.duckduckgo.browsermode.api.BrowserMode
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.formatters.time.DatabaseDateFormatter
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.duckchat.impl.messaging.sync.isSyncable
@@ -88,20 +89,18 @@ class RealDuckChatSyncRepository @Inject constructor(
         }
     }
 
+    @OnIo
     override suspend fun getLastDuckAiChatDeletionTimestamp(): String? {
-        return withContext(dispatchers.io()) {
-            duckChatSyncMetadataStore.deletionTimestamp
-        }
+        return duckChatSyncMetadataStore.deletionTimestamp
     }
 
     // Get current timestamp and only clear if it matches given param
+    @OnIo
     override suspend fun clearDeletionTimestampIfMatches(timestamp: String) {
-        withContext(dispatchers.io()) {
-            val currentTimestamp = getLastDuckAiChatDeletionTimestamp()
-            if (currentTimestamp == timestamp) {
-                logcat { "DuckChat-Sync: cleared local deletion timestamp $timestamp" }
-                duckChatSyncMetadataStore.deletionTimestamp = null
-            }
+        val currentTimestamp = getLastDuckAiChatDeletionTimestamp()
+        if (currentTimestamp == timestamp) {
+            logcat { "DuckChat-Sync: cleared local deletion timestamp $timestamp" }
+            duckChatSyncMetadataStore.deletionTimestamp = null
         }
     }
 
@@ -117,25 +116,22 @@ class RealDuckChatSyncRepository @Inject constructor(
         }
     }
 
+    @OnIo
     override suspend fun getPendingChatDeletions(): Set<String> {
-        return withContext(dispatchers.io()) {
-            duckChatSyncMetadataStore.pendingChatDeletions
-        }
+        return duckChatSyncMetadataStore.pendingChatDeletions
     }
 
+    @OnIo
     override suspend fun removePendingChatDeletions(ids: Set<String>) {
-        withContext(dispatchers.io()) {
-            val current = duckChatSyncMetadataStore.pendingChatDeletions
-            duckChatSyncMetadataStore.pendingChatDeletions = current - ids
-            logcat { "DuckChat-Sync: removed ${ids.size} pending chat deletions, remaining: ${(current - ids).size}" }
-        }
+        val current = duckChatSyncMetadataStore.pendingChatDeletions
+        duckChatSyncMetadataStore.pendingChatDeletions = current - ids
+        logcat { "DuckChat-Sync: removed ${ids.size} pending chat deletions, remaining: ${(current - ids).size}" }
     }
 
+    @OnIo
     override suspend fun clearPendingChatDeletions() {
-        withContext(dispatchers.io()) {
-            duckChatSyncMetadataStore.pendingChatDeletions = emptySet()
-            logcat { "DuckChat-Sync: cleared all pending chat deletions" }
-        }
+        duckChatSyncMetadataStore.pendingChatDeletions = emptySet()
+        logcat { "DuckChat-Sync: cleared all pending chat deletions" }
     }
 
     override suspend fun recordSingleChatUpdate(chatId: String, mode: BrowserMode) {
@@ -150,24 +146,21 @@ class RealDuckChatSyncRepository @Inject constructor(
         }
     }
 
+    @OnIo
     override suspend fun getPendingChatUpdates(): Set<String> {
-        return withContext(dispatchers.io()) {
-            duckChatSyncMetadataStore.pendingChatUpdates
-        }
+        return duckChatSyncMetadataStore.pendingChatUpdates
     }
 
+    @OnIo
     override suspend fun removePendingChatUpdates(ids: Set<String>) {
-        withContext(dispatchers.io()) {
-            val current = duckChatSyncMetadataStore.pendingChatUpdates
-            duckChatSyncMetadataStore.pendingChatUpdates = current - ids
-            logcat { "DuckChat-Sync: removed ${ids.size} pending chat updates, remaining: ${(current - ids).size}" }
-        }
+        val current = duckChatSyncMetadataStore.pendingChatUpdates
+        duckChatSyncMetadataStore.pendingChatUpdates = current - ids
+        logcat { "DuckChat-Sync: removed ${ids.size} pending chat updates, remaining: ${(current - ids).size}" }
     }
 
+    @OnIo
     override suspend fun clearPendingChatUpdates() {
-        withContext(dispatchers.io()) {
-            duckChatSyncMetadataStore.pendingChatUpdates = emptySet()
-            logcat { "DuckChat-Sync: cleared all pending chat updates" }
-        }
+        duckChatSyncMetadataStore.pendingChatUpdates = emptySet()
+        logcat { "DuckChat-Sync: cleared all pending chat updates" }
     }
 }

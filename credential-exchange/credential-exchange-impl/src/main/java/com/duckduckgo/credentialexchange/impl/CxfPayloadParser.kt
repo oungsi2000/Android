@@ -19,6 +19,7 @@ package com.duckduckgo.credentialexchange.impl
 import androidx.credentials.providerevents.transfer.CredentialTypes.CREDENTIAL_TYPE_BASIC_AUTH
 import androidx.credentials.providerevents.transfer.CredentialTypes.CREDENTIAL_TYPE_NOTE
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.credentialexchange.api.ExchangedCredential
 import com.duckduckgo.credentialexchange.impl.CxfParseResult.Malformed
 import com.duckduckgo.credentialexchange.impl.CxfParseResult.Parsed
@@ -27,7 +28,6 @@ import com.squareup.anvil.annotations.ContributesBinding
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
 import logcat.logcat
 import javax.inject.Inject
@@ -55,14 +55,15 @@ class RealCxfPayloadParser @Inject constructor(
     private val moshi by lazy { Moshi.Builder().add(KotlinJsonAdapterFactory()).build() }
     private val adapter by lazy { moshi.adapter(CxfPayload::class.java) }
 
-    override suspend fun parse(cxfJson: String): CxfParseResult = withContext(dispatchers.io()) {
+    @OnIo
+    override suspend fun parse(cxfJson: String): CxfParseResult {
         val payload = runCatching { adapter.fromJson(cxfJson) }
             .onFailure { logcat(ERROR) { "${LOG_PREFIX}could not read CXF payload: ${it.message}" } }
             .getOrNull()
 
-        val accounts = payload?.accounts ?: return@withContext Malformed
+        val accounts = payload?.accounts ?: return Malformed
 
-        Parsed(accounts.flatMap { account -> account.items.orEmpty().flatMap { it.toExchangedCredentials() } })
+        return Parsed(accounts.flatMap { account -> account.items.orEmpty().flatMap { it.toExchangedCredentials() } })
     }
 
     private fun CxfItem.toExchangedCredentials(): List<ExchangedCredential> {

@@ -17,6 +17,7 @@
 package com.duckduckgo.pir.impl.common
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.pir.impl.common.CaptchaResolver.CaptchaResolverError.ClientFailure
 import com.duckduckgo.pir.impl.common.CaptchaResolver.CaptchaResolverError.CriticalFailure
 import com.duckduckgo.pir.impl.common.CaptchaResolver.CaptchaResolverError.InvalidRequest
@@ -46,7 +47,6 @@ import com.duckduckgo.pir.impl.service.parseError
 import com.duckduckgo.pir.impl.store.PirRepository
 import com.duckduckgo.pir.impl.store.PirRepository.GeneratedEmailData
 import com.squareup.moshi.Moshi
-import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 
 interface NativeBrokerActionHandler {
@@ -116,14 +116,14 @@ class RealNativeBrokerActionHandler(
 ) : NativeBrokerActionHandler {
     private val adapter = moshi.adapter(ResponseError::class.java)
 
-    override suspend fun pushAction(nativeAction: NativeAction): NativeActionResult =
-        withContext(dispatcherProvider.io()) {
-            when (nativeAction) {
-                is GetEmail -> handleGetEmail(nativeAction)
-                is SubmitCaptchaInfo -> handleSolveCaptcha(nativeAction)
-                is GetCaptchaSolutionStatus -> handleGetCaptchaSolutionStatus(nativeAction)
-            }
+    @OnIo
+    override suspend fun pushAction(nativeAction: NativeAction): NativeActionResult {
+        return when (nativeAction) {
+            is GetEmail -> handleGetEmail(nativeAction)
+            is SubmitCaptchaInfo -> handleSolveCaptcha(nativeAction)
+            is GetCaptchaSolutionStatus -> handleGetCaptchaSolutionStatus(nativeAction)
         }
+    }
 
     private suspend fun handleGetEmail(action: GetEmail): NativeActionResult =
         kotlin

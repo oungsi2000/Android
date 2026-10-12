@@ -24,9 +24,9 @@ import com.duckduckgo.app.browser.favicon.FaviconPersister
 import com.duckduckgo.app.browser.favicon.FileBasedFaviconPersister
 import com.duckduckgo.app.global.view.generateDefaultDrawable
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 
@@ -48,11 +48,12 @@ class WidgetFaviconProvider @Inject constructor(
      * Stale widget-sized placeholders previously mis-persisted into the main favicons
      * directory by older app versions are cleaned up as part of this lookup.
      */
+    @OnIo
     suspend fun getOrGenerateWidgetFavicon(
         domain: String,
         placeholderSizePx: Int,
         @DimenRes placeholderCornerRadius: Int,
-    ): File? = withContext(dispatcherProvider.io()) {
+    ): File? {
         // step 1: check if any file (real favicon or placeholder) already exists on disk to avoid fetching/generating it again
         faviconPersister.faviconFile(
             FileBasedFaviconPersister.FAVICON_PERSISTED_DIR,
@@ -66,7 +67,7 @@ class WidgetFaviconProvider @Inject constructor(
             if (file.isSizedExactly(placeholderSizePx)) {
                 file.delete()
             } else {
-                return@withContext file
+                return file
             }
         }
 
@@ -76,7 +77,7 @@ class WidgetFaviconProvider @Inject constructor(
             FileBasedFaviconPersister.NO_SUBFOLDER,
             domain,
         )?.let {
-            return@withContext it
+            return it
         }
 
         // step 3: generate and save placeholder
@@ -86,7 +87,7 @@ class WidgetFaviconProvider @Inject constructor(
             cornerRadius = placeholderCornerRadius,
         ).toBitmap(placeholderSizePx, placeholderSizePx)
 
-        faviconPersister.store(
+        return faviconPersister.store(
             FileBasedFaviconPersister.FAVICON_WIDGET_PLACEHOLDERS_DIR,
             FileBasedFaviconPersister.NO_SUBFOLDER,
             placeholder,

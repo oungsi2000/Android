@@ -28,9 +28,9 @@ import com.duckduckgo.adclick.api.AdClickManager
 import com.duckduckgo.anvil.annotations.ContributesWorker
 import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesMultibinding
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.VERBOSE
 import logcat.logcat
 import java.util.concurrent.TimeUnit
@@ -46,12 +46,11 @@ class DataRemovalAdClickWorker(context: Context, workerParameters: WorkerParamet
     @Inject
     lateinit var dispatchers: DispatcherProvider
 
+    @OnIo
     override suspend fun doWork(): Result {
-        return withContext(dispatchers.io()) {
-            adClickManager.clearAllExpiredAsync()
+        adClickManager.clearAllExpiredAsync()
 
-            return@withContext Result.success()
-        }
+        return Result.success()
     }
 }
 

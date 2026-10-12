@@ -21,10 +21,10 @@ import com.duckduckgo.app.cta.model.CtaId
 import com.duckduckgo.app.cta.model.DismissedCta
 import com.duckduckgo.app.onboarding.store.OnboardingStore
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
@@ -50,11 +50,10 @@ class RealDuckAiOnboardingDemo @Inject constructor(
     private val dispatchers: DispatcherProvider,
 ) : DuckAiOnboardingDemo {
 
+    @OnIo
     override suspend fun arm() {
-        withContext(dispatchers.io()) {
-            onboardingStore.setDuckAiOnboardingFlow()
-            PRE_DISMISSED_CTAS.forEach { dismissedCtaDao.insert(DismissedCta(it)) }
-        }
+        onboardingStore.setDuckAiOnboardingFlow()
+        PRE_DISMISSED_CTAS.forEach { dismissedCtaDao.insert(DismissedCta(it)) }
     }
 
     override fun isActive(): Boolean = onboardingStore.isDuckAiOnboardingFlow()

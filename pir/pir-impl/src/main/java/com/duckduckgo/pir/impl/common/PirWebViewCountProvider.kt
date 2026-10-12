@@ -17,13 +17,13 @@
 package com.duckduckgo.pir.impl.common
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.pir.impl.PirRemoteFeatures
 import com.duckduckgo.pir.impl.common.PirJobConstants.DEFAULT_MAX_DETACHED_WEBVIEW_COUNT
 import com.duckduckgo.pir.impl.common.PirJobConstants.MAX_DETACHED_WEBVIEW_COUNT_CEILING
 import com.duckduckgo.pir.impl.common.PirJobConstants.MIN_DETACHED_WEBVIEW_COUNT
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import javax.inject.Inject
 
@@ -40,8 +40,9 @@ class RealPirWebViewCountProvider @Inject constructor(
     private val dispatcherProvider: DispatcherProvider,
 ) : PirWebViewCountProvider {
 
-    override suspend fun getMaxWebViewCount(): Int = withContext(dispatcherProvider.io()) {
-        runCatching {
+    @OnIo
+    override suspend fun getMaxWebViewCount(): Int {
+        return runCatching {
             val settings = pirRemoteFeatures.self().getSettings() ?: return@runCatching DEFAULT_MAX_DETACHED_WEBVIEW_COUNT
             val json = JSONObject(settings)
             if (!json.has(SETTINGS_KEY_WEBVIEW_COUNT)) {

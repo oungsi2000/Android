@@ -24,12 +24,12 @@ import com.duckduckgo.app.fire.FireproofRepository
 import com.duckduckgo.app.statistics.pixels.Pixel
 import com.duckduckgo.browsermode.api.BrowserMode
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.cookies.api.CookieManagerProvider
 import com.duckduckgo.cookies.api.CookieRemover
 import com.duckduckgo.cookies.impl.CookiesPixelName.COOKIE_DELETE_ERROR
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.VERBOSE
 import logcat.asLog
 import logcat.logcat
@@ -64,15 +64,14 @@ class SQLCookieRemover @Inject constructor(
 
     private val databaseErrorHandler = PixelSenderDatabaseErrorHandler()
 
+    @OnIo
     override suspend fun removeCookies(): Boolean {
-        return withContext(dispatcherProvider.io()) {
-            val databasePath: String = webViewDatabaseLocator.getDatabasePath()
-            if (databasePath.isNotEmpty()) {
-                val excludedHosts = fireproofRepository.fireproofWebsites()
-                return@withContext removeCookies(databasePath, excludedHosts)
-            }
-            return@withContext false
+        val databasePath: String = webViewDatabaseLocator.getDatabasePath()
+        if (databasePath.isNotEmpty()) {
+            val excludedHosts = fireproofRepository.fireproofWebsites()
+            return removeCookies(databasePath, excludedHosts)
         }
+        return false
     }
 
     private fun openReadableDatabase(databasePath: String): SQLiteDatabase? {

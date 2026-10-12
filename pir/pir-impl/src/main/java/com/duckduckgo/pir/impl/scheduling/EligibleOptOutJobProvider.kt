@@ -17,6 +17,7 @@
 package com.duckduckgo.pir.impl.scheduling
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.pir.impl.models.scheduling.BrokerSchedulingConfig
 import com.duckduckgo.pir.impl.models.scheduling.JobRecord.OptOutJobRecord
@@ -24,7 +25,6 @@ import com.duckduckgo.pir.impl.models.scheduling.JobRecord.OptOutJobRecord.OptOu
 import com.duckduckgo.pir.impl.store.PirRepository
 import com.duckduckgo.pir.impl.store.PirSchedulingRepository
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -39,12 +39,13 @@ class RealEligibleOptOutJobProvider @Inject constructor(
     private val pirRepository: PirRepository,
 ) : EligibleOptOutJobProvider {
 
+    @OnIo
     override suspend fun getAllEligibleOptOutJobs(
         timeInMillis: Long,
-    ): List<OptOutJobRecord> = withContext(dispatcherProvider.io()) {
+    ): List<OptOutJobRecord> {
         val schedulingConfigs = pirRepository.getAllBrokerSchedulingConfigs()
 
-        pirSchedulingRepository.getAllValidOptOutJobRecords().filter { record ->
+        return pirSchedulingRepository.getAllValidOptOutJobRecords().filter { record ->
             val schedulingConfig =
                 schedulingConfigs.find { config -> config.brokerName == record.brokerName }
 

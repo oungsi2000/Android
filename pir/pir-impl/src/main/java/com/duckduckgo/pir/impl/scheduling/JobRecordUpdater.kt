@@ -18,6 +18,7 @@ package com.duckduckgo.pir.impl.scheduling
 
 import com.duckduckgo.common.utils.CurrentTimeProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.pir.impl.common.toKey
 import com.duckduckgo.pir.impl.models.ExtractedProfile
@@ -35,7 +36,6 @@ import com.duckduckgo.pir.impl.models.scheduling.JobRecord.ScanJobRecord.ScanJob
 import com.duckduckgo.pir.impl.store.PirRepository
 import com.duckduckgo.pir.impl.store.PirSchedulingRepository
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import javax.inject.Inject
 
@@ -357,180 +357,174 @@ class RealJobRecordUpdater @Inject constructor(
         )
     }
 
+    @OnIo
     override suspend fun markOptOutAsAttempted(extractedProfileId: Long) {
-        withContext(dispatcherProvider.io()) {
-            schedulingRepository.getValidOptOutJobRecord(extractedProfileId)?.also {
-                schedulingRepository.saveOptOutJobRecord(
-                    it
-                        .copy(
-                            attemptCount = it.attemptCount + 1,
-                            lastOptOutAttemptDateInMillis = currentTimeProvider.currentTimeMillis(),
-                        ).also {
-                            logcat { "PIR-JOB-RECORD: Updating OptOutRecord for $extractedProfileId to $it" }
-                        },
-                )
-            }
+        schedulingRepository.getValidOptOutJobRecord(extractedProfileId)?.also {
+            schedulingRepository.saveOptOutJobRecord(
+                it
+                    .copy(
+                        attemptCount = it.attemptCount + 1,
+                        lastOptOutAttemptDateInMillis = currentTimeProvider.currentTimeMillis(),
+                    ).also {
+                        logcat { "PIR-JOB-RECORD: Updating OptOutRecord for $extractedProfileId to $it" }
+                    },
+            )
         }
     }
 
+    @OnIo
     override suspend fun markRemovedOptOutJobRecords(
         newExtractedProfiles: List<ExtractedProfile>,
         brokerName: String,
         profileQueryId: Long,
     ) {
-        withContext(dispatcherProvider.io()) {
-            val currentTimeMillis = currentTimeProvider.currentTimeMillis()
-            val storedExtractedProfiles =
-                repository.getExtractedProfiles(brokerName, profileQueryId)
+        val currentTimeMillis = currentTimeProvider.currentTimeMillis()
+        val storedExtractedProfiles =
+            repository.getExtractedProfiles(brokerName, profileQueryId)
 
-            if (storedExtractedProfiles.isNotEmpty()) {
-                val newKeys =
-                    newExtractedProfiles
-                        .asSequence()
-                        .map { it.toKey() }
-                        .toHashSet()
-
-                logcat { "PIR-JOB-RECORD: New Profiles ${newExtractedProfiles.size} : $newExtractedProfiles" }
-                logcat { "PIR-JOB-RECORD: Stored Profiles ${storedExtractedProfiles.size} : $storedExtractedProfiles" }
-
-                val removedExtractedProfiles =
-                    storedExtractedProfiles
-                        .asSequence()
-                        .filter { it.toKey() !in newKeys }
-                        .toList()
-
-                logcat { "PIR-JOB-RECORD: Removed Profiles $removedExtractedProfiles" }
-
-                val profileQuery = repository.getUserProfileQuery(profileQueryId)
-                removedExtractedProfiles.forEach { extractedProfile ->
-                    updateOptOutJobRecordAsRemoved(
-                        profileQuery = profileQuery,
-                        extractedProfileId = extractedProfile.dbId,
-                        removedDateInMillis = currentTimeMillis,
-                    )
-                }
-            }
-        }
-    }
-
-    private suspend fun updateOptOutJobRecordAsRemoved(
-        profileQuery: ProfileQuery?,
-        extractedProfileId: Long,
-        removedDateInMillis: Long,
-    ) {
-        withContext(dispatcherProvider.io()) {
-            schedulingRepository.getValidOptOutJobRecord(extractedProfileId)?.also {
-                schedulingRepository.saveOptOutJobRecord(
-                    it
-                        .copy(
-                            status = OptOutJobStatus.REMOVED,
-                            optOutRemovedDateInMillis = removedDateInMillis,
-                            // we've confirmed that the extracted profile for a deprecated profile query has been removed
-                            // and need to mark the opt out job record as deprecated to not pick it up again for maintenance scans
-                            deprecated = profileQuery?.deprecated == true,
-                        ).also {
-                            logcat { "PIR-JOB-RECORD: Updating OptOutRecord for $extractedProfileId to $it" }
-                        },
-                )
-            }
-        }
-    }
-
-    override suspend fun markReappearedOptOutJobRecords(
-        newExtractedProfiles: List<ExtractedProfile>,
-        brokerName: String,
-        profileQueryId: Long,
-    ): List<OptOutJobRecord> {
-        return withContext(dispatcherProvider.io()) {
-            if (newExtractedProfiles.isEmpty()) {
-                return@withContext emptyList()
-            }
-
-            val storedExtractedProfiles =
-                repository.getExtractedProfiles(brokerName, profileQueryId)
-
-            if (storedExtractedProfiles.isEmpty()) {
-                return@withContext emptyList()
-            }
-
+        if (storedExtractedProfiles.isNotEmpty()) {
             val newKeys =
                 newExtractedProfiles
                     .asSequence()
                     .map { it.toKey() }
                     .toHashSet()
 
-            val reappearedExtractedProfiles =
+            logcat { "PIR-JOB-RECORD: New Profiles ${newExtractedProfiles.size} : $newExtractedProfiles" }
+            logcat { "PIR-JOB-RECORD: Stored Profiles ${storedExtractedProfiles.size} : $storedExtractedProfiles" }
+
+            val removedExtractedProfiles =
                 storedExtractedProfiles
                     .asSequence()
-                    .filter { it.toKey() in newKeys }
+                    .filter { it.toKey() !in newKeys }
                     .toList()
 
-            logcat { "PIR-JOB-RECORD: Reappeared Profiles $reappearedExtractedProfiles" }
+            logcat { "PIR-JOB-RECORD: Removed Profiles $removedExtractedProfiles" }
 
-            reappearedExtractedProfiles.mapNotNull { extractedProfile ->
-                revertReappearedOptOutJobRecord(extractedProfile.dbId)
+            val profileQuery = repository.getUserProfileQuery(profileQueryId)
+            removedExtractedProfiles.forEach { extractedProfile ->
+                updateOptOutJobRecordAsRemoved(
+                    profileQuery = profileQuery,
+                    extractedProfileId = extractedProfile.dbId,
+                    removedDateInMillis = currentTimeMillis,
+                )
             }
         }
     }
 
-    private suspend fun revertReappearedOptOutJobRecord(extractedProfileId: Long): OptOutJobRecord? {
-        return withContext(dispatcherProvider.io()) {
-            // Only scan-confirmed removals should be reverted. Deprecated records (including
-            // REMOVED_BY_USER, which is always deprecated) are excluded by getValidOptOutJobRecord,
-            // and the status check guards against reverting anything that isn't currently REMOVED.
-            val record = schedulingRepository.getValidOptOutJobRecord(extractedProfileId)
-                ?.takeIf { it.status == OptOutJobStatus.REMOVED }
-                ?: return@withContext null
+    @OnIo
+    private suspend fun updateOptOutJobRecordAsRemoved(
+        profileQuery: ProfileQuery?,
+        extractedProfileId: Long,
+        removedDateInMillis: Long,
+    ) {
+        schedulingRepository.getValidOptOutJobRecord(extractedProfileId)?.also {
+            schedulingRepository.saveOptOutJobRecord(
+                it
+                    .copy(
+                        status = OptOutJobStatus.REMOVED,
+                        optOutRemovedDateInMillis = removedDateInMillis,
+                        // we've confirmed that the extracted profile for a deprecated profile query has been removed
+                        // and need to mark the opt out job record as deprecated to not pick it up again for maintenance scans
+                        deprecated = profileQuery?.deprecated == true,
+                    ).also {
+                        logcat { "PIR-JOB-RECORD: Updating OptOutRecord for $extractedProfileId to $it" }
+                    },
+            )
+        }
+    }
 
-            val updatedRecord = record.copy(
+    @OnIo
+    override suspend fun markReappearedOptOutJobRecords(
+        newExtractedProfiles: List<ExtractedProfile>,
+        brokerName: String,
+        profileQueryId: Long,
+    ): List<OptOutJobRecord> {
+        if (newExtractedProfiles.isEmpty()) {
+            return emptyList()
+        }
+
+        val storedExtractedProfiles =
+            repository.getExtractedProfiles(brokerName, profileQueryId)
+
+        if (storedExtractedProfiles.isEmpty()) {
+            return emptyList()
+        }
+
+        val newKeys =
+            newExtractedProfiles
+                .asSequence()
+                .map { it.toKey() }
+                .toHashSet()
+
+        val reappearedExtractedProfiles =
+            storedExtractedProfiles
+                .asSequence()
+                .filter { it.toKey() in newKeys }
+                .toList()
+
+        logcat { "PIR-JOB-RECORD: Reappeared Profiles $reappearedExtractedProfiles" }
+
+        return reappearedExtractedProfiles.mapNotNull { extractedProfile ->
+            revertReappearedOptOutJobRecord(extractedProfile.dbId)
+        }
+    }
+
+    @OnIo
+    private suspend fun revertReappearedOptOutJobRecord(extractedProfileId: Long): OptOutJobRecord? {
+        // Only scan-confirmed removals should be reverted. Deprecated records (including
+        // REMOVED_BY_USER, which is always deprecated) are excluded by getValidOptOutJobRecord,
+        // and the status check guards against reverting anything that isn't currently REMOVED.
+        val record = schedulingRepository.getValidOptOutJobRecord(extractedProfileId)
+            ?.takeIf { it.status == OptOutJobStatus.REMOVED }
+            ?: return null
+
+        val updatedRecord = record.copy(
+            status = OptOutJobStatus.REQUESTED,
+            optOutRemovedDateInMillis = 0L,
+        )
+        schedulingRepository.saveOptOutJobRecord(updatedRecord)
+        logcat { "PIR-JOB-RECORD: OptOutRecord for $extractedProfileId reappeared, reverting to $updatedRecord" }
+        return updatedRecord
+    }
+
+    @OnIo
+    override suspend fun updateOptOutRequested(extractedProfileId: Long): OptOutJobRecord? {
+        return schedulingRepository.getValidOptOutJobRecord(extractedProfileId)?.also {
+            val now = currentTimeProvider.currentTimeMillis()
+            val updatedRecord = it.copy(
                 status = OptOutJobStatus.REQUESTED,
-                optOutRemovedDateInMillis = 0L,
+                optOutRequestedDateInMillis = now,
+                optOutFormSubmittedDateInMillis = it.optOutFormSubmittedDateInMillis ?: now,
             )
             schedulingRepository.saveOptOutJobRecord(updatedRecord)
-            logcat { "PIR-JOB-RECORD: OptOutRecord for $extractedProfileId reappeared, reverting to $updatedRecord" }
-            updatedRecord
+
+            logcat { "PIR-JOB-RECORD: Updating OptOutRecord for $extractedProfileId to $it" }
+
+            return updatedRecord
         }
     }
 
-    override suspend fun updateOptOutRequested(extractedProfileId: Long): OptOutJobRecord? {
-        return withContext(dispatcherProvider.io()) {
-            schedulingRepository.getValidOptOutJobRecord(extractedProfileId)?.also {
-                val now = currentTimeProvider.currentTimeMillis()
-                val updatedRecord = it.copy(
-                    status = OptOutJobStatus.REQUESTED,
-                    optOutRequestedDateInMillis = now,
-                    optOutFormSubmittedDateInMillis = it.optOutFormSubmittedDateInMillis ?: now,
-                )
-                schedulingRepository.saveOptOutJobRecord(updatedRecord)
-
-                logcat { "PIR-JOB-RECORD: Updating OptOutRecord for $extractedProfileId to $it" }
-
-                return@withContext updatedRecord
-            }
-        }
-    }
-
+    @OnIo
     override suspend fun updateOptOutError(extractedProfileId: Long): OptOutJobRecord? {
-        return withContext(dispatcherProvider.io()) {
-            schedulingRepository.getValidOptOutJobRecord(extractedProfileId)?.also {
-                val updatedRecord = it.copy(
-                    status = OptOutJobStatus.ERROR,
-                )
-                schedulingRepository.saveOptOutJobRecord(updatedRecord)
-                logcat { "PIR-JOB-RECORD: Updating OptOutRecord for $extractedProfileId to $it" }
+        return schedulingRepository.getValidOptOutJobRecord(extractedProfileId)?.also {
+            val updatedRecord = it.copy(
+                status = OptOutJobStatus.ERROR,
+            )
+            schedulingRepository.saveOptOutJobRecord(updatedRecord)
+            logcat { "PIR-JOB-RECORD: Updating OptOutRecord for $extractedProfileId to $it" }
 
-                return@withContext updatedRecord
-            }
+            return updatedRecord
         }
     }
 
+    @OnIo
     override suspend fun markOptOutAsWaitingForEmailConfirmation(
         profileQueryId: Long,
         extractedProfileId: Long,
         brokerName: String,
         email: String,
         attemptId: String,
-    ): EmailConfirmationJobRecord = withContext(dispatcherProvider.io()) {
+    ): EmailConfirmationJobRecord {
         val newRecord = EmailConfirmationJobRecord(
             userProfileId = profileQueryId,
             extractedProfileId = extractedProfileId,
@@ -554,41 +548,38 @@ class RealJobRecordUpdater @Inject constructor(
                     },
             )
         }
-        return@withContext newRecord
+        return newRecord
     }
 
+    @OnIo
     override suspend fun removeAllJobRecordsForProfiles(profileQueryIds: List<Long>) {
-        withContext(dispatcherProvider.io()) {
-            schedulingRepository.deleteJobRecordsForProfiles(profileQueryIds)
-        }
+        schedulingRepository.deleteJobRecordsForProfiles(profileQueryIds)
     }
 
+    @OnIo
     override suspend fun removeScanJobRecordsWithNoMatchesForProfiles(profileQueryIds: List<Long>) {
-        withContext(dispatcherProvider.io()) {
-            schedulingRepository.deleteScanJobRecordsWithoutMatchesForProfiles(profileQueryIds)
-        }
+        schedulingRepository.deleteScanJobRecordsWithoutMatchesForProfiles(profileQueryIds)
     }
 
+    @OnIo
     override suspend fun markRecordsAsRemovedByUser(extractedProfileId: Long) {
-        withContext(dispatcherProvider.io()) {
-            repository.markExtractedProfileAsDeprecated(extractedProfileId)
+        repository.markExtractedProfileAsDeprecated(extractedProfileId)
 
-            // update the OptOutJobRecord for this ExtractedProfile (if it exists)
-            schedulingRepository.getValidOptOutJobRecord(extractedProfileId)?.run {
-                schedulingRepository.saveOptOutJobRecord(
-                    copy(
-                        status = OptOutJobStatus.REMOVED_BY_USER,
-                        deprecated = true,
-                    ).also {
-                        logcat { "PIR-JOB-RECORD: Updated OptOutJobRecord for $extractedProfileId to REMOVED_BY_USER: $it" }
-                    },
-                )
-            }
+        // update the OptOutJobRecord for this ExtractedProfile (if it exists)
+        schedulingRepository.getValidOptOutJobRecord(extractedProfileId)?.run {
+            schedulingRepository.saveOptOutJobRecord(
+                copy(
+                    status = OptOutJobStatus.REMOVED_BY_USER,
+                    deprecated = true,
+                ).also {
+                    logcat { "PIR-JOB-RECORD: Updated OptOutJobRecord for $extractedProfileId to REMOVED_BY_USER: $it" }
+                },
+            )
+        }
 
-            // delete the EmailConfirmationJobRecord for this ExtractedProfile (if it exists)
-            schedulingRepository.deleteEmailConfirmationJobRecord(extractedProfileId).also {
-                logcat { "PIR-JOB-RECORD: Delete EmailConfirmationJobRecord for $extractedProfileId" }
-            }
+        // delete the EmailConfirmationJobRecord for this ExtractedProfile (if it exists)
+        schedulingRepository.deleteEmailConfirmationJobRecord(extractedProfileId).also {
+            logcat { "PIR-JOB-RECORD: Delete EmailConfirmationJobRecord for $extractedProfileId" }
         }
     }
 

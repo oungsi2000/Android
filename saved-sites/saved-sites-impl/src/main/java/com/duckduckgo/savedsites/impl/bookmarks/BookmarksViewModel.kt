@@ -16,11 +16,13 @@
 
 package com.duckduckgo.savedsites.impl.bookmarks
 
+import com.duckduckgo.savedsites.impl.FireSavedSitesPixel
 import android.net.Uri
 import androidx.lifecycle.*
 import com.duckduckgo.anvil.annotations.ContributesViewModel
 import com.duckduckgo.app.browser.favicon.FaviconManager
 import com.duckduckgo.app.di.AppCoroutineScope
+import com.duckduckgo.app.statistics.pixels.HasPixel
 import com.duckduckgo.app.statistics.pixels.Pixel
 import com.duckduckgo.app.statistics.pixels.Pixel.PixelType.Daily
 import com.duckduckgo.autofill.api.ImportFromGoogle
@@ -80,14 +82,14 @@ class BookmarksViewModel @Inject constructor(
     private val savedSitesRepository: SavedSitesRepository,
     private val faviconManager: FaviconManager,
     private val savedSitesManager: SavedSitesManager,
-    private val pixel: Pixel,
+    override val pixel: Pixel,
     private val syncEngine: SyncEngine,
     private val faviconsFetchingPrompt: FaviconsFetchingPrompt,
     private val bookmarksDataStore: BookmarksDataStore,
     private val dispatcherProvider: DispatcherProvider,
     private val importFromGoogle: ImportFromGoogle,
     @AppCoroutineScope private val appCoroutineScope: CoroutineScope,
-) : EditSavedSiteListener, AddBookmarkFolderListener, EditBookmarkFolderListener, DeleteBookmarkListener, ViewModel() {
+) : EditSavedSiteListener, AddBookmarkFolderListener, EditBookmarkFolderListener, DeleteBookmarkListener, HasPixel, ViewModel() {
 
     data class ViewState(
         val enableSearch: Boolean = false,
@@ -168,27 +170,23 @@ class BookmarksViewModel @Inject constructor(
         }
     }
 
-    override fun onFavoriteAdded() {
-        pixel.fire(SavedSitesPixelName.EDIT_BOOKMARK_ADD_FAVORITE_TOGGLED)
-        pixel.fire(SavedSitesPixelName.EDIT_BOOKMARK_ADD_FAVORITE_TOGGLED_DAILY, type = Daily())
-    }
+    @FireSavedSitesPixel(SavedSitesPixelName.EDIT_BOOKMARK_ADD_FAVORITE_TOGGLED)
+    @FireSavedSitesPixel(SavedSitesPixelName.EDIT_BOOKMARK_ADD_FAVORITE_TOGGLED_DAILY, daily = true)
+    override fun onFavoriteAdded() {}
 
-    override fun onFavoriteRemoved() {
-        pixel.fire(SavedSitesPixelName.EDIT_BOOKMARK_REMOVE_FAVORITE_TOGGLED)
-    }
+    @FireSavedSitesPixel(SavedSitesPixelName.EDIT_BOOKMARK_REMOVE_FAVORITE_TOGGLED)
+    override fun onFavoriteRemoved() {}
 
     override fun onSavedSiteDeleted(savedSite: SavedSite) {
         onDeleteSavedSiteRequested(savedSite)
         pixel.fire(SavedSitesPixelName.EDIT_BOOKMARK_DELETE_BOOKMARK_CONFIRMED)
     }
 
-    override fun onSavedSiteDeleteCancelled() {
-        pixel.fire(SavedSitesPixelName.EDIT_BOOKMARK_DELETE_BOOKMARK_CANCELLED)
-    }
+    @FireSavedSitesPixel(SavedSitesPixelName.EDIT_BOOKMARK_DELETE_BOOKMARK_CANCELLED)
+    override fun onSavedSiteDeleteCancelled() {}
 
-    override fun onSavedSiteDeleteRequested() {
-        pixel.fire(SavedSitesPixelName.EDIT_BOOKMARK_DELETE_BOOKMARK_CLICKED)
-    }
+    @FireSavedSitesPixel(SavedSitesPixelName.EDIT_BOOKMARK_DELETE_BOOKMARK_CLICKED)
+    override fun onSavedSiteDeleteRequested() {}
 
     fun onSelected(savedSite: SavedSite) {
         if (savedSite is Favorite) {
@@ -462,9 +460,8 @@ class BookmarksViewModel @Inject constructor(
         fetchBookmarksAndFolders(currentFolderId)
     }
 
-    fun onBookmarkItemDeletedFromOverflowMenu() {
-        pixel.fire(SavedSitesPixelName.BOOKMARK_MENU_DELETE_BOOKMARK_CLICKED)
-    }
+    @FireSavedSitesPixel(SavedSitesPixelName.BOOKMARK_MENU_DELETE_BOOKMARK_CLICKED)
+    fun onBookmarkItemDeletedFromOverflowMenu() {}
 
     suspend fun onSearchQueryUpdated(newText: String) {
         withContext(dispatcherProvider.main()) {
@@ -516,9 +513,8 @@ class BookmarksViewModel @Inject constructor(
         }
     }
 
+    @FireSavedSitesPixel(SavedSitesPixelName.BOOKMARK_MENU_IMPORT_CLICKED)
     fun onImportBookmarksClicked() {
-        pixel.fire(SavedSitesPixelName.BOOKMARK_MENU_IMPORT_CLICKED)
-
         viewModelScope.launch {
             val googleImportLaunchIntent = withContext(dispatcherProvider.io()) {
                 importFromGoogle.getBookmarksImportLaunchIntent()
@@ -532,13 +528,13 @@ class BookmarksViewModel @Inject constructor(
         }
     }
 
+    @FireSavedSitesPixel(SavedSitesPixelName.BOOKMARK_MENU_EXPORT_CLICKED)
     fun onExportBookmarksClicked() {
-        pixel.fire(SavedSitesPixelName.BOOKMARK_MENU_EXPORT_CLICKED)
         command.value = LaunchBookmarkExport
     }
 
+    @FireSavedSitesPixel(SavedSitesPixelName.BOOKMARK_MENU_ADD_FOLDER_CLICKED)
     fun onAddFolderClicked() {
-        pixel.fire(SavedSitesPixelName.BOOKMARK_MENU_ADD_FOLDER_CLICKED)
         command.value = LaunchAddFolder
     }
 }

@@ -23,6 +23,7 @@ import com.duckduckgo.anvil.annotations.ContributesRemoteFeature
 import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.common.utils.DefaultDispatcherProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.data.store.api.SharedPreferencesProvider
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.feature.toggles.api.ConversionWindow
@@ -306,10 +307,11 @@ class AppTpRemoteFeaturesStore @Inject constructor(
 class AppTpTDSPixelsPlugin @Inject constructor(private val inventory: FeatureTogglesInventory) : MetricsPixelPlugin {
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider()
 
-    override suspend fun getMetrics(): List<MetricsPixel> = withContext(dispatchers.io()) {
-        val activeToggle = inventory.activeAppTpTdsFlag() ?: return@withContext emptyList()
+    @OnIo
+    override suspend fun getMetrics(): List<MetricsPixel> {
+        val activeToggle = inventory.activeAppTpTdsFlag() ?: return emptyList()
 
-        return@withContext listOf(
+        return listOf(
             MetricsPixel(
                 metric = "selectedRemoveTrackingProtectionFeature",
                 value = "1",

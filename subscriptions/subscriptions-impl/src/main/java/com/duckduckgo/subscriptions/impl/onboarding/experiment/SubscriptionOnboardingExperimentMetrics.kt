@@ -17,6 +17,7 @@
 package com.duckduckgo.subscriptions.impl.onboarding.experiment
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.feature.toggles.api.ConversionWindow
 import com.duckduckgo.feature.toggles.api.MetricType
@@ -25,7 +26,6 @@ import com.duckduckgo.feature.toggles.api.Toggle
 import com.duckduckgo.feature.toggles.api.send
 import com.duckduckgo.subscriptions.impl.SubscriptionsFeature
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface SubscriptionOnboardingExperimentMetrics {
@@ -40,16 +40,15 @@ class RealSubscriptionOnboardingExperimentMetrics @Inject constructor(
     private val dispatcherProvider: DispatcherProvider,
 ) : SubscriptionOnboardingExperimentMetrics {
 
+    @OnIo
     override suspend fun fireDuckAiPaidUsed() {
-        withContext(dispatcherProvider.io()) {
-            val freeTrial = subscriptionsFeature.subscriptionOnboardingFreeTrialsOct2026()
-            fire(freeTrial, metric = "duckAiPaidUsed_d1", window = ConversionWindow(lowerWindow = 0, upperWindow = 1))
-            fire(freeTrial, metric = "duckAiPaidUsed_d2_7", window = ConversionWindow(lowerWindow = 2, upperWindow = 7))
+        val freeTrial = subscriptionsFeature.subscriptionOnboardingFreeTrialsOct2026()
+        fire(freeTrial, metric = "duckAiPaidUsed_d1", window = ConversionWindow(lowerWindow = 0, upperWindow = 1))
+        fire(freeTrial, metric = "duckAiPaidUsed_d2_7", window = ConversionWindow(lowerWindow = 2, upperWindow = 7))
 
-            val paid = subscriptionsFeature.subscriptionOnboardingPaidSubsOct2026()
-            fire(paid, metric = "duckAiPaidUsed_d1", window = ConversionWindow(lowerWindow = 0, upperWindow = 1))
-            fire(paid, metric = "duckAiPaidUsed_d2_30", window = ConversionWindow(lowerWindow = 2, upperWindow = 30))
-        }
+        val paid = subscriptionsFeature.subscriptionOnboardingPaidSubsOct2026()
+        fire(paid, metric = "duckAiPaidUsed_d1", window = ConversionWindow(lowerWindow = 0, upperWindow = 1))
+        fire(paid, metric = "duckAiPaidUsed_d2_30", window = ConversionWindow(lowerWindow = 2, upperWindow = 30))
     }
 
     private suspend fun fire(

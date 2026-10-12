@@ -366,6 +366,7 @@ import com.duckduckgo.common.utils.AppUrl
 import com.duckduckgo.common.utils.AppUrl.ParamKey.QUERY
 import com.duckduckgo.common.utils.ConflatedJob
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.SingleLiveEvent
 import com.duckduckgo.common.utils.baseHost
 import com.duckduckgo.common.utils.device.DeviceInfo
@@ -1424,8 +1425,10 @@ class BrowserTabViewModel @Inject constructor(
         }
     }
 
-    suspend fun isAutocompleteHistoryDeleteButtonEnabled(): Boolean =
-        withContext(dispatchers.io()) { autocompleteHistoryDeleteFeature.self().isEnabled() }
+    @OnIo
+    suspend fun isAutocompleteHistoryDeleteButtonEnabled(): Boolean {
+        return autocompleteHistoryDeleteFeature.self().isEnabled()
+    }
 
     fun onUserRequestedToDeleteAutocompleteItem(suggestion: AutoCompleteSuggestion) {
         when (suggestion) {
@@ -2481,10 +2484,10 @@ class BrowserTabViewModel @Inject constructor(
         }
     }
 
-    private suspend fun isPrivacyProtectionDisabled(domain: String): Boolean =
-        withContext(dispatchers.io()) {
-            userAllowListRepository.isDomainInUserAllowList(domain) || contentBlocking.isAnException(domain)
-        }
+    @OnIo
+    private suspend fun isPrivacyProtectionDisabled(domain: String): Boolean {
+        return userAllowListRepository.isDomainInUserAllowList(domain) || contentBlocking.isAnException(domain)
+    }
 
     private fun isDomainInUserAllowlist(domain: String): Flow<Boolean> =
         userAllowListRepository
@@ -2504,10 +2507,10 @@ class BrowserTabViewModel @Inject constructor(
         }
     }
 
-    private suspend fun getBookmark(url: String): Bookmark? =
-        withContext(dispatchers.io()) {
-            savedSitesRepository.getBookmark(url)
-        }
+    @OnIo
+    private suspend fun getBookmark(url: String): Bookmark? {
+        return savedSitesRepository.getBookmark(url)
+    }
 
     private suspend fun getBookmarkFolder(bookmark: Bookmark?): BookmarkFolder? {
         if (bookmark == null) return null
@@ -2516,10 +2519,10 @@ class BrowserTabViewModel @Inject constructor(
         }
     }
 
-    private suspend fun getFavorite(url: String): Favorite? =
-        withContext(dispatchers.io()) {
-            savedSitesRepository.getFavorite(url)
-        }
+    @OnIo
+    private suspend fun getFavorite(url: String): Favorite? {
+        return savedSitesRepository.getFavorite(url)
+    }
 
     private fun notifyPermanentLocationPermission(domain: String) {
         viewModelScope.launch(dispatchers.io()) {
@@ -3668,22 +3671,21 @@ class BrowserTabViewModel @Inject constructor(
         accessibilityViewState.value = AccessibilityViewState()
     }
 
+    @OnIo
     private suspend fun initializeViewStatesFromPersistedData() {
-        withContext(dispatchers.io()) {
-            val addToHomeSupported = addToHomeCapabilityDetector.isAddToHomeSupported()
-            val showAutofill = autofillCapabilityChecker.canAccessCredentialManagementScreen()
-            val showDuckChat = duckAiFeatureState.showPopupMenuShortcut.value
-            val showDuckChatHistory = duckChat.isChatHistoryAvailable()
+        val addToHomeSupported = addToHomeCapabilityDetector.isAddToHomeSupported()
+        val showAutofill = autofillCapabilityChecker.canAccessCredentialManagementScreen()
+        val showDuckChat = duckAiFeatureState.showPopupMenuShortcut.value
+        val showDuckChatHistory = duckChat.isChatHistoryAvailable()
 
-            withContext(dispatchers.main()) {
-                browserViewState.value =
-                    currentBrowserViewState().copy(
-                        addToHomeVisible = addToHomeSupported,
-                        showAutofill = showAutofill,
-                        showDuckChatOption = showDuckChat,
-                        showDuckChatHistoryOption = showDuckChatHistory,
-                    )
-            }
+        withContext(dispatchers.main()) {
+            browserViewState.value =
+                currentBrowserViewState().copy(
+                    addToHomeVisible = addToHomeSupported,
+                    showAutofill = showAutofill,
+                    showDuckChatOption = showDuckChat,
+                    showDuckChatHistoryOption = showDuckChatHistory,
+                )
         }
     }
 

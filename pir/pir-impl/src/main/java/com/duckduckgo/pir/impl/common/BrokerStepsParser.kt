@@ -17,6 +17,7 @@
 package com.duckduckgo.pir.impl.common
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.pir.impl.common.BrokerStepsParser.BrokerStep
 import com.duckduckgo.pir.impl.common.BrokerStepsParser.BrokerStep.EmailConfirmationStep
@@ -33,7 +34,6 @@ import com.duckduckgo.pir.impl.store.PirRepository
 import com.squareup.anvil.annotations.ContributesBinding
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
 import logcat.logcat
 import javax.inject.Inject
@@ -118,12 +118,13 @@ class RealBrokerStepsParser @Inject constructor(
         moshi.adapter(BrokerStepActions::class.java)
     }
 
+    @OnIo
     override suspend fun parseStep(
         broker: Broker,
         stepsJson: String,
         profileQueryId: Long?,
-    ): List<BrokerStep> = withContext(dispatcherProvider.io()) {
-        return@withContext runCatching {
+    ): List<BrokerStep> {
+        return runCatching {
             adapter.fromJson(stepsJson)?.run {
                 val stepActions = this
                 if (this is OptOutStepActions) {
@@ -153,12 +154,13 @@ class RealBrokerStepsParser @Inject constructor(
         }
     }
 
+    @OnIo
     override suspend fun parseEmailConfirmationStep(
         broker: Broker,
         optOutStepJson: String,
         emailConfirmationJob: EmailConfirmationJobRecord,
-    ): BrokerStep? = withContext(dispatcherProvider.io()) {
-        return@withContext runCatching {
+    ): BrokerStep? {
+        return runCatching {
             val profile = repository.getExtractedProfile(emailConfirmationJob.extractedProfileId)
             if (profile != null) {
                 adapter.fromJson(optOutStepJson)?.run {

@@ -16,9 +16,11 @@
 
 package com.duckduckgo.remote.messaging.impl.store
 
+import com.duckduckgo.common.utils.LogFailure
 import android.content.Context
 import com.bumptech.glide.Glide
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.remote.messaging.api.CardItem
 import com.duckduckgo.remote.messaging.api.Content
 import com.duckduckgo.remote.messaging.api.RemoteMessage
@@ -78,29 +80,27 @@ class GlideRemoteMessageImageStore(
         fetchAndStoreCardItemImages(message)
     }
 
+    @OnIo
     override suspend fun getLocalImageFilePath(surface: Surface): String? {
-        return withContext(dispatcherProvider.io()) {
-            val file = getImageFile(surface)
-            if (file.exists()) file.absolutePath else null
-        }
+        val file = getImageFile(surface)
+        return if (file.exists()) file.absolutePath else null
     }
 
     override suspend fun clearStoredImageFile(surface: Surface) {
         deleteStoredImage(surface)
     }
 
+    @OnIo
     private suspend fun deleteStoredImage(surface: Surface) {
-        withContext(dispatcherProvider.io()) {
-            runCatching {
-                getImageFile(surface).let {
-                    if (it.exists()) {
-                        logcat { "RMF: Clear the stored image file for surface: ${surface.jsonValue}" }
-                        it.delete()
-                    }
+        runCatching {
+            getImageFile(surface).let {
+                if (it.exists()) {
+                    logcat { "RMF: Clear the stored image file for surface: ${surface.jsonValue}" }
+                    it.delete()
                 }
-            }.onFailure {
-                logcat { "Failed to clear the stored image file for surface: ${surface.jsonValue}" }
             }
+        }.onFailure {
+            logcat { "Failed to clear the stored image file for surface: ${surface.jsonValue}" }
         }
     }
 
@@ -109,11 +109,10 @@ class GlideRemoteMessageImageStore(
         return File(context.filesDir, fileName)
     }
 
+    @OnIo
     override suspend fun getCardItemImageFilePath(itemId: String): String? {
-        return withContext(dispatcherProvider.io()) {
-            val file = getCardItemImageFile(itemId)
-            if (file.exists()) file.absolutePath else null
-        }
+        val file = getCardItemImageFile(itemId)
+        return if (file.exists()) file.absolutePath else null
     }
 
     private suspend fun fetchAndStoreCardItemImages(message: RemoteMessage?) {
@@ -141,18 +140,15 @@ class GlideRemoteMessageImageStore(
         }
     }
 
+    @OnIo
     private suspend fun clearItemImages(imagesDir: String) {
-        withContext(dispatcherProvider.io()) {
-            runCatching {
-                val dir = File(context.filesDir, imagesDir)
-                if (dir.exists()) {
-                    logcat { "RMF: Clearing all item images in $imagesDir" }
-                    dir.deleteRecursively()
-                }
-            }.onFailure {
-                logcat { "RMF: Failed to clear card item images: ${it.message}" }
+        runCatching {
+            val dir = File(context.filesDir, imagesDir)
+            if (dir.exists()) {
+                logcat { "RMF: Clearing all item images in $imagesDir" }
+                dir.deleteRecursively()
             }
-        }
+        }.onFailure @LogFailure("RMF: Failed to clear card item images: ", stackTrace = false) {}
     }
 
     private fun downloadImageToFile(imageUrl: String, targetFile: File) {

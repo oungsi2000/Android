@@ -29,6 +29,7 @@ import com.duckduckgo.browser.api.WebViewVersionProvider
 import com.duckduckgo.browser.feature.toggles.AndroidBrowserConfigFeature
 import com.duckduckgo.common.utils.CurrentTimeProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.contentscopescripts.api.ContentScopeOptimizations
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
@@ -38,7 +39,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -381,8 +381,9 @@ class RealPageLoadWideEvent @Inject constructor(
         return state
     }
 
-    private suspend fun isFeatureEnabled(): Boolean = withContext(dispatchers.io()) {
-        androidBrowserConfigFeature.get().sendPageLoadWideEvent().isEnabled()
+    @OnIo
+    private suspend fun isFeatureEnabled(): Boolean {
+        return androidBrowserConfigFeature.get().sendPageLoadWideEvent().isEnabled()
     }
 
     private inner class PageLoadState(

@@ -19,6 +19,7 @@ package com.duckduckgo.duckchat.impl.models
 import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.browsermode.api.BrowserMode
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.cookies.api.CookieManagerProvider
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.duckchat.api.DuckAiHostProvider
@@ -41,7 +42,6 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import javax.inject.Inject
 
@@ -173,60 +173,59 @@ class RealDuckAiModelManager @Inject constructor(
         )
     }
 
+    @OnIo
     override suspend fun fetchModels() {
-        withContext(dispatcherProvider.io()) {
-            try {
-                val userTier = resolveUserTier()
-                val response = fetchModelsResponse()
-                val isSubscriptionEligible = runCatching {
-                    subscriptions.isEligible()
-                }.getOrElse {
-                    logcat { "Duck.ai Model Manager: failed to resolve purchase eligibility, defaulting to not eligible: ${it.message}" }
-                    false
-                }
-                val isFreeTrialEligible = runCatching {
-                    subscriptions.isFreeTrialEligible()
-                }.getOrElse {
-                    logcat { "Duck.ai Model Manager: failed to resolve free trial eligibility, defaulting to not eligible: ${it.message}" }
-                    false
-                }
-                reportUnknownLabels(response.models)
-                val models = response.models
-                    .map { resolveModel(it, userTier) }
-                    .filterNot { it.accessTier.isEmpty() && !it.isAccessible }
-                    .filterNot {
-                        !it.isAccessible && !isSubscriptionEligible
-                    }
-                val attachmentLimits = resolveAttachmentLimits(response.attachmentLimits, userTier)
-                stateMutex.withLock {
-                    // Selection is resolved before sorting so the derived default keeps following
-                    // endpoint order, and only the picker's display order changes.
-                    val selectedModelId = resolveSelection(models)
-                    val displayModels = models.sortLabelledFirst()
-                    val selectedModel = models.find { it.id == selectedModelId }
-                    val available = ReasoningResolver.availableModes(
-                        supported = selectedModel?.supportedReasoningEfforts.orEmpty(),
-                        effortAccess = selectedModel?.reasoningEffortAccess.orEmpty(),
-                        isEligible = isSubscriptionEligible,
-                    )
-                    val nextReasoningMode = validateAndPersistReasoningMode(_modelState.value.selectedReasoningMode, available)
-
-                    _modelState.value = _modelState.value.copy(
-                        models = displayModels,
-                        selectedModelId = selectedModelId,
-                        selectedModelShortName = selectedModel?.shortName,
-                        userTier = userTier,
-                        isSubscriptionEligible = isSubscriptionEligible,
-                        isFreeTrialEligible = isFreeTrialEligible,
-                        attachmentLimits = attachmentLimits,
-                        selectedReasoningMode = nextReasoningMode,
-                        availableReasoningModes = available,
-                    )
-                    logcat { "Duck.ai Model Manager: fetched ${displayModels.size} models, tier=$userTier, selected=$selectedModelId" }
-                }
-            } catch (e: Exception) {
-                logcat { "Duck.ai Model Manager: failed to fetch models: ${e.message}" }
+        try {
+            val userTier = resolveUserTier()
+            val response = fetchModelsResponse()
+            val isSubscriptionEligible = runCatching {
+                subscriptions.isEligible()
+            }.getOrElse {
+                logcat { "Duck.ai Model Manager: failed to resolve purchase eligibility, defaulting to not eligible: ${it.message}" }
+                false
             }
+            val isFreeTrialEligible = runCatching {
+                subscriptions.isFreeTrialEligible()
+            }.getOrElse {
+                logcat { "Duck.ai Model Manager: failed to resolve free trial eligibility, defaulting to not eligible: ${it.message}" }
+                false
+            }
+            reportUnknownLabels(response.models)
+            val models = response.models
+                .map { resolveModel(it, userTier) }
+                .filterNot { it.accessTier.isEmpty() && !it.isAccessible }
+                .filterNot {
+                    !it.isAccessible && !isSubscriptionEligible
+                }
+            val attachmentLimits = resolveAttachmentLimits(response.attachmentLimits, userTier)
+            stateMutex.withLock {
+                // Selection is resolved before sorting so the derived default keeps following
+                // endpoint order, and only the picker's display order changes.
+                val selectedModelId = resolveSelection(models)
+                val displayModels = models.sortLabelledFirst()
+                val selectedModel = models.find { it.id == selectedModelId }
+                val available = ReasoningResolver.availableModes(
+                    supported = selectedModel?.supportedReasoningEfforts.orEmpty(),
+                    effortAccess = selectedModel?.reasoningEffortAccess.orEmpty(),
+                    isEligible = isSubscriptionEligible,
+                )
+                val nextReasoningMode = validateAndPersistReasoningMode(_modelState.value.selectedReasoningMode, available)
+
+                _modelState.value = _modelState.value.copy(
+                    models = displayModels,
+                    selectedModelId = selectedModelId,
+                    selectedModelShortName = selectedModel?.shortName,
+                    userTier = userTier,
+                    isSubscriptionEligible = isSubscriptionEligible,
+                    isFreeTrialEligible = isFreeTrialEligible,
+                    attachmentLimits = attachmentLimits,
+                    selectedReasoningMode = nextReasoningMode,
+                    availableReasoningModes = available,
+                )
+                logcat { "Duck.ai Model Manager: fetched ${displayModels.size} models, tier=$userTier, selected=$selectedModelId" }
+            }
+        } catch (e: Exception) {
+            logcat { "Duck.ai Model Manager: failed to fetch models: ${e.message}" }
         }
     }
 
@@ -282,28 +281,26 @@ class RealDuckAiModelManager @Inject constructor(
         const val PINNED_DEFAULT_MODEL_ID = "gpt-5.4-mini"
     }
 
+    @OnIo
     override suspend fun selectModel(model: AIChatModel) {
-        withContext(dispatcherProvider.io()) {
-            stateMutex.withLock {
-                dataStore.setSelectedModel(SelectedModel(model.id, model.shortName))
-                dataStore.setSelectedProvider(null)
-                publishSelection(modelId = model.id, model = model)
-                logcat { "Duck.ai Model Manager: selected model ${model.id} (${model.shortName})" }
-            }
+        stateMutex.withLock {
+            dataStore.setSelectedModel(SelectedModel(model.id, model.shortName))
+            dataStore.setSelectedProvider(null)
+            publishSelection(modelId = model.id, model = model)
+            logcat { "Duck.ai Model Manager: selected model ${model.id} (${model.shortName})" }
         }
     }
 
+    @OnIo
     override suspend fun selectProvider(provider: ModelProvider) {
-        withContext(dispatcherProvider.io()) {
-            stateMutex.withLock {
-                dataStore.setSelectedModel(null)
-                dataStore.setSelectedProvider(provider.name)
+        stateMutex.withLock {
+            dataStore.setSelectedModel(null)
+            dataStore.setSelectedProvider(provider.name)
 
-                val models = _modelState.value.models
-                val selectedModelId = resolveSelection(models)
-                publishSelection(modelId = selectedModelId, model = models.find { it.id == selectedModelId })
-                logcat { "Duck.ai Model Manager: selected provider ${provider.name}, resolved model $selectedModelId" }
-            }
+            val models = _modelState.value.models
+            val selectedModelId = resolveSelection(models)
+            publishSelection(modelId = selectedModelId, model = models.find { it.id == selectedModelId })
+            logcat { "Duck.ai Model Manager: selected provider ${provider.name}, resolved model $selectedModelId" }
         }
     }
 
@@ -329,15 +326,14 @@ class RealDuckAiModelManager @Inject constructor(
         )
     }
 
+    @OnIo
     override suspend fun selectReasoningMode(mode: ReasoningMode) {
-        withContext(dispatcherProvider.io()) {
-            stateMutex.withLock {
-                val match = _modelState.value.availableReasoningModes.firstOrNull { it.mode == mode }
-                if (match == null || !match.isAccessible) return@withLock
-                dataStore.setSelectedReasoningMode(mode.rawValue)
-                _modelState.value = _modelState.value.copy(selectedReasoningMode = mode)
-                logcat { "Duck.ai Model Manager: selected reasoning mode ${mode.rawValue}" }
-            }
+        stateMutex.withLock {
+            val match = _modelState.value.availableReasoningModes.firstOrNull { it.mode == mode }
+            if (match == null || !match.isAccessible) return@withLock
+            dataStore.setSelectedReasoningMode(mode.rawValue)
+            _modelState.value = _modelState.value.copy(selectedReasoningMode = mode)
+            logcat { "Duck.ai Model Manager: selected reasoning mode ${mode.rawValue}" }
         }
     }
 

@@ -20,6 +20,7 @@ import com.duckduckgo.app.statistics.wideevents.CleanupPolicy.OnProcessStart
 import com.duckduckgo.app.statistics.wideevents.FlowStatus
 import com.duckduckgo.app.statistics.wideevents.WideEventClient
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.sync.impl.SyncBuildConfig
 import com.duckduckgo.sync.impl.SyncFeature
@@ -33,7 +34,6 @@ import com.duckduckgo.sync.impl.wideevents.SyncSetupWideEventImpl.Companion.STEP
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.Lazy
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface SyncSetupWideEvent {
@@ -67,8 +67,9 @@ class SyncSetupWideEventImpl @Inject constructor(
 
     private var cachedFlowId: Long? = null
 
-    private suspend fun isFeatureEnabled(): Boolean = withContext(dispatchers.io()) {
-        syncFeature.get().sendSyncSetupWideEvent().isEnabled()
+    @OnIo
+    private suspend fun isFeatureEnabled(): Boolean {
+        return syncFeature.get().sendSyncSetupWideEvent().isEnabled()
     }
 
     private suspend fun getCurrentWideEventId(): Long? {

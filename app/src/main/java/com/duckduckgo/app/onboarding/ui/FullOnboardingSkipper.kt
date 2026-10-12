@@ -25,6 +25,7 @@ import com.duckduckgo.app.onboarding.store.UserStageStore
 import com.duckduckgo.app.onboarding.ui.FullOnboardingSkipper.ViewState
 import com.duckduckgo.app.settings.db.SettingsDataStore
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.privacy.config.api.PrivacyConfigCallbackPlugin
 import com.squareup.anvil.annotations.ContributesBinding
@@ -33,7 +34,6 @@ import dagger.SingleInstanceIn
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface OnboardingSkipper {
@@ -59,13 +59,12 @@ class FullOnboardingSkipper @Inject constructor(
     override val privacyConfigDownloaded = _privacyConfigDownloaded.asStateFlow()
 
     @Suppress("DEPRECATION")
+    @OnIo
     override suspend fun markOnboardingAsCompleted() {
-        withContext(dispatchers.io()) {
-            settingsDataStore.hideTips = true
-            newAddressBarPickerDataStore.setAsShown()
-            dismissedCtaDao.insert(DismissedCta(CtaId.ADD_WIDGET))
-            userStageStore.stageCompleted(AppStage.DAX_ONBOARDING)
-        }
+        settingsDataStore.hideTips = true
+        newAddressBarPickerDataStore.setAsShown()
+        dismissedCtaDao.insert(DismissedCta(CtaId.ADD_WIDGET))
+        userStageStore.stageCompleted(AppStage.DAX_ONBOARDING)
     }
 
     override fun onPrivacyConfigDownloaded() {

@@ -19,10 +19,10 @@ package com.duckduckgo.app.browser.suggestredirect
 import android.net.Uri
 import androidx.core.net.toUri
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.common.utils.extensions.toTldPlusOne
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 data class RedirectSuggestion(
@@ -46,25 +46,26 @@ class RealSuggestRedirectEvaluator @Inject constructor(
     private val hostnameResolver: HostnameResolver,
     private val dispatcherProvider: DispatcherProvider,
 ) : SuggestRedirectEvaluator {
-    override suspend fun suggestRedirect(url: String): RedirectSuggestion? = withContext(dispatcherProvider.io()) {
+    @OnIo
+    override suspend fun suggestRedirect(url: String): RedirectSuggestion? {
         val uri = url.toUri()
-        val hostname = uri.host ?: return@withContext null
+        val hostname = uri.host ?: return null
 
         if (hostname.startsWith(WWW_PREFIX)) {
-            return@withContext null
+            return null
         }
 
         if (hostname != hostname.toTldPlusOne()) {
             // Non-registrable (eTLD+1) domains are rejected (e.g. localhost, a.b.domain.com)
-            return@withContext null
+            return null
         }
 
         val suggestedDomain = "${WWW_PREFIX}$hostname"
         if (!hostnameResolver.resolves(suggestedDomain)) {
-            return@withContext null
+            return null
         }
 
-        return@withContext RedirectSuggestion(
+        return RedirectSuggestion(
             domain = suggestedDomain,
             url = uri.replaceHost(suggestedDomain).toString(),
         )

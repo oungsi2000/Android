@@ -19,9 +19,9 @@ package com.duckduckgo.autofill.impl.username
 import com.duckduckgo.autofill.api.AutofillFeature
 import com.duckduckgo.autofill.api.domain.app.LoginCredentials
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface AutofillUsernameComparer {
@@ -39,14 +39,13 @@ class RealAutofillUsernameComparer @Inject constructor(
     private val dispatchers: DispatcherProvider,
 ) : AutofillUsernameComparer {
 
+    @OnIo
     override suspend fun isEqual(username1: String?, username2: String?): Boolean {
-        return withContext(dispatchers.io()) {
-            if (username1 == null && username2 == null) return@withContext true
-            if (username1 == null) return@withContext false
-            if (username2 == null) return@withContext false
+        if (username1 == null && username2 == null) return true
+        if (username1 == null) return false
+        if (username2 == null) return false
 
-            username1.equals(username2, ignoreCase = autofillFeature.ignoreCaseOnUsernameComparisons().isEnabled())
-        }
+        return username1.equals(username2, ignoreCase = autofillFeature.ignoreCaseOnUsernameComparisons().isEnabled())
     }
     override suspend fun groupUsernamesAndPasswords(logins: List<LoginCredentials>): Map<Pair<String?, String?>, List<LoginCredentials>> {
         return if (autofillFeature.ignoreCaseOnUsernameComparisons().isEnabled()) {

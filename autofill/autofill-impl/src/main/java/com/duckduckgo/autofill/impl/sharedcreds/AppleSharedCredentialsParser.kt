@@ -22,12 +22,12 @@ import com.duckduckgo.autofill.impl.sharedcreds.SharedCredentialsParser.Unidirec
 import com.duckduckgo.autofill.impl.urlmatcher.AutofillUrlMatcher
 import com.duckduckgo.autofill.impl.urlmatcher.AutofillUrlMatcher.ExtractedUrlParts
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.ERROR
 import logcat.LogPriority.WARN
 import logcat.asLog
@@ -64,17 +64,16 @@ class AppleSharedCredentialsParser @Inject constructor(
     private val autofillUrlMatcher: AutofillUrlMatcher,
 ) : SharedCredentialsParser {
 
+    @OnIo
     override suspend fun read(): SharedCredentialConfig {
-        return withContext(dispatchers.io()) {
-            runCatching {
-                val json = jsonReader.read()
-                convertJsonToRules(json)
-            }
-                .getOrElse {
-                    logcat(ERROR) { "Failed to parse shared credentials json: ${it.asLog()}" }
-                    CONFIG_WHEN_ERROR_HAPPENED
-                }
+        return runCatching {
+            val json = jsonReader.read()
+            convertJsonToRules(json)
         }
+            .getOrElse {
+                logcat(ERROR) { "Failed to parse shared credentials json: ${it.asLog()}" }
+                CONFIG_WHEN_ERROR_HAPPENED
+            }
     }
 
     private fun convertJsonToRules(json: String?): SharedCredentialConfig {

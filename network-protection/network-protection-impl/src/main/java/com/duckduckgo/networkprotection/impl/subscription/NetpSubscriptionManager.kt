@@ -17,6 +17,7 @@
 package com.duckduckgo.networkprotection.impl.subscription
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.networkprotection.impl.subscription.NetpSubscriptionManager.VpnStatus
 import com.duckduckgo.subscriptions.api.Product.NetP
@@ -26,7 +27,6 @@ import com.squareup.anvil.annotations.ContributesBinding
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface NetpSubscriptionManager {
@@ -63,9 +63,10 @@ class RealNetpSubscriptionManager @Inject constructor(
         return hasValidEntitlementFlow().map { getVpnStatusInternal(it) }
     }
 
-    private suspend fun hasValidEntitlement(): Boolean = withContext(dispatcherProvider.io()) {
+    @OnIo
+    private suspend fun hasValidEntitlement(): Boolean {
         val entitlements = subscriptions.getEntitlementStatus().firstOrNull()
-        return@withContext (entitlements?.contains(NetP) == true)
+        return (entitlements?.contains(NetP) == true)
     }
 
     private fun hasValidEntitlementFlow(): Flow<Boolean> = subscriptions.getEntitlementStatus().map { it.contains(NetP) }

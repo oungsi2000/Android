@@ -18,6 +18,7 @@ package com.duckduckgo.pir.impl.dashboard.state
 
 import com.duckduckgo.common.utils.CurrentTimeProvider
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.ActivityScope
 import com.duckduckgo.pir.impl.common.BrokerStepsParser
 import com.duckduckgo.pir.impl.dashboard.state.PirDashboardInitialScanStateProvider.DashboardBrokerWithStatus
@@ -31,7 +32,6 @@ import com.duckduckgo.pir.impl.store.PirRepository
 import com.duckduckgo.pir.impl.store.PirSchedulingRepository
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import javax.inject.Inject
 
@@ -103,7 +103,8 @@ class RealPirDashboardInitialScanStateProvider @Inject constructor(
     private val pirScanScheduler: PirScanScheduler,
 ) : PirDashboardStateProvider(currentTimeProvider, pirRepository, pirSchedulingRepository),
     PirDashboardInitialScanStateProvider {
-    override suspend fun getActiveBrokersAndMirrorSitesTotal(): Int = withContext(dispatcherProvider.io()) {
+    @OnIo
+    override suspend fun getActiveBrokersAndMirrorSitesTotal(): Int {
         val currentTime = currentTimeProvider.currentTimeMillis()
         val scannableBrokerNames = getScannableActiveBrokerNames()
         // Take all extant mirror sites whose parent broker can actually be scanned
@@ -111,7 +112,7 @@ class RealPirDashboardInitialScanStateProvider @Inject constructor(
             scannableBrokerNames.contains(it.parentSite)
         }
 
-        return@withContext scannableBrokerNames.size + activeMirrorSites.size
+        return scannableBrokerNames.size + activeMirrorSites.size
     }
 
     private suspend fun getScannableActiveBrokerNames(): Set<String> {

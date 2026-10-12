@@ -19,6 +19,7 @@ package com.duckduckgo.networkprotection.impl.connectionclass
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.data.store.api.SharedPreferencesProvider
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -39,8 +40,9 @@ class ConnectionQualityStore @Inject constructor(
         connectionLatencyMs = value
     }
 
-    suspend fun getConnectionLatency(): Int = withContext(dispatcherProvider.io()) {
-        return@withContext connectionLatencyMs
+    @OnIo
+    suspend fun getConnectionLatency(): Int {
+        return connectionLatencyMs
     }
 
     internal suspend fun reset() = withContext(dispatcherProvider.io()) {

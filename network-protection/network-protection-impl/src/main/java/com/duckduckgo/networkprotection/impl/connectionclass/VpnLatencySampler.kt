@@ -18,6 +18,7 @@ package com.duckduckgo.networkprotection.impl.connectionclass
 
 import com.duckduckgo.common.utils.ConflatedJob
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.VpnScope
 import com.duckduckgo.mobile.android.vpn.service.VpnServiceCallbacks
 import com.duckduckgo.mobile.android.vpn.state.VpnStateMonitor
@@ -84,8 +85,9 @@ class VpnLatencySampler @Inject constructor(
         }
     }
 
-    private suspend fun sampleLatency(): ConnectionQuality? = withContext(dispatcherProvider.io()) {
-        return@withContext wgTunnelConfig.getWgConfig()?.asServerDetails()?.ipAddress?.let { server ->
+    @OnIo
+    private suspend fun sampleLatency(): ConnectionQuality? {
+        return wgTunnelConfig.getWgConfig()?.asServerDetails()?.ipAddress?.let { server ->
             val latency = latencyMeasurer.measureLatency(server)
             if (latency >= 0) {
                 connectionClassManager.addLatency(latency.toDouble())

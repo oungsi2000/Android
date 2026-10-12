@@ -22,10 +22,10 @@ import com.duckduckgo.autofill.impl.deduper.AutofillLoginDeduplicator
 import com.duckduckgo.autofill.impl.service.mapper.AppCredentialProvider
 import com.duckduckgo.autofill.impl.ui.credential.selecting.AutofillSelectCredentialsGrouper
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import logcat.LogPriority.VERBOSE
 import logcat.logcat
 import javax.inject.Inject
@@ -45,26 +45,24 @@ class AutofillServiceSuggestions @Inject constructor(
     private val dispatcherProvider: DispatcherProvider,
 ) : AutofillSuggestions {
 
+    @OnIo
     override suspend fun getSiteSuggestions(website: String): List<LoginCredentials> {
-        return withContext(dispatcherProvider.io()) {
-            val credentials = autofillStore.getCredentials(website)
-            loginDeduplicator.deduplicate(website, credentials).let { dedupLogins ->
-                grouper.group(website, dedupLogins).let { groups ->
-                    groups.perfectMatches
-                        .plus(groups.partialMatches.values.flatten())
-                        .plus(groups.shareableCredentials.values.flatten())
-                }
-            }.also {
-                logcat(VERBOSE) { "DDGAutofillService credentials for domain: $it" }
+        val credentials = autofillStore.getCredentials(website)
+        return loginDeduplicator.deduplicate(website, credentials).let { dedupLogins ->
+            grouper.group(website, dedupLogins).let { groups ->
+                groups.perfectMatches
+                    .plus(groups.partialMatches.values.flatten())
+                    .plus(groups.shareableCredentials.values.flatten())
             }
+        }.also {
+            logcat(VERBOSE) { "DDGAutofillService credentials for domain: $it" }
         }
     }
 
+    @OnIo
     override suspend fun getAppSuggestions(packageId: String): List<LoginCredentials> {
-        return withContext(dispatcherProvider.io()) {
-            appCredentialProvider.getCredentials(packageId).also {
-                logcat(VERBOSE) { "DDGAutofillService credentials for package: $it" }
-            }
+        return appCredentialProvider.getCredentials(packageId).also {
+            logcat(VERBOSE) { "DDGAutofillService credentials for package: $it" }
         }
     }
 }

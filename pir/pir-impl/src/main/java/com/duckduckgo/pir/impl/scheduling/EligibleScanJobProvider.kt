@@ -17,6 +17,7 @@
 package com.duckduckgo.pir.impl.scheduling
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.pir.impl.models.scheduling.BrokerSchedulingConfig
 import com.duckduckgo.pir.impl.models.scheduling.JobRecord.OptOutJobRecord
@@ -26,7 +27,6 @@ import com.duckduckgo.pir.impl.models.scheduling.JobRecord.ScanJobRecord.ScanJob
 import com.duckduckgo.pir.impl.store.PirRepository
 import com.duckduckgo.pir.impl.store.PirSchedulingRepository
 import com.squareup.anvil.annotations.ContributesBinding
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface EligibleScanJobProvider {
@@ -39,22 +39,22 @@ class RealEligibleScanJobProvider @Inject constructor(
     private val pirSchedulingRepository: PirSchedulingRepository,
     private val pirRepository: PirRepository,
 ) : EligibleScanJobProvider {
-    override suspend fun getAllEligibleScanJobs(timeInMillis: Long): List<ScanJobRecord> =
-        withContext(dispatcherProvider.io()) {
-            val schedulingConfigs = pirRepository.getAllBrokerSchedulingConfigs()
-            val validScanJobsFromOptOut = getValidScanJobsFromOptOut(
-                schedulingConfigs,
-                timeInMillis,
-            )
-            val validScanJobsFromScanRecords = getValidScanJobsFromScanJobRecords(
-                schedulingConfigs,
-                timeInMillis,
-            )
+    @OnIo
+    override suspend fun getAllEligibleScanJobs(timeInMillis: Long): List<ScanJobRecord> {
+        val schedulingConfigs = pirRepository.getAllBrokerSchedulingConfigs()
+        val validScanJobsFromOptOut = getValidScanJobsFromOptOut(
+            schedulingConfigs,
+            timeInMillis,
+        )
+        val validScanJobsFromScanRecords = getValidScanJobsFromScanJobRecords(
+            schedulingConfigs,
+            timeInMillis,
+        )
 
-            return@withContext (validScanJobsFromOptOut + validScanJobsFromScanRecords)
-                .toSet()
-                .toList()
-        }
+        return (validScanJobsFromOptOut + validScanJobsFromScanRecords)
+            .toSet()
+            .toList()
+    }
 
     private suspend fun getValidScanJobsFromOptOut(
         schedulingConfigs: List<BrokerSchedulingConfig>,

@@ -27,11 +27,11 @@ import androidx.work.WorkerParameters
 import com.duckduckgo.anvil.annotations.ContributesWorker
 import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.fingerprintprotection.store.seed.FingerprintProtectionSeedRepository
 import com.squareup.anvil.annotations.ContributesMultibinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeUnit.DAYS
 import javax.inject.Inject
@@ -48,11 +48,10 @@ class FingerprintProtectionSeedWorker(
     @Inject
     lateinit var fingerprintProtectionSeedRepository: FingerprintProtectionSeedRepository
 
+    @OnIo
     override suspend fun doWork(): Result {
-        return withContext(dispatcherProvider.io()) {
-            fingerprintProtectionSeedRepository.storeNewSeed()
-            return@withContext Result.success()
-        }
+        fingerprintProtectionSeedRepository.storeNewSeed()
+        return Result.success()
     }
 }
 

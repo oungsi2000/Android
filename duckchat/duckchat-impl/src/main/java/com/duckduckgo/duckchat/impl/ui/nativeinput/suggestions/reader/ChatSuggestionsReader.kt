@@ -25,6 +25,7 @@ import android.webkit.WebViewClient
 import androidx.annotation.VisibleForTesting
 import com.duckduckgo.appbuildconfig.api.AppBuildConfig
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.ActivityScope
 import com.duckduckgo.duckchat.api.DuckAiHostProvider
 import com.duckduckgo.duckchat.impl.feature.DuckAiChatHistoryFeature
@@ -106,17 +107,16 @@ class RealChatSuggestionsReader @Inject constructor(
 
     // region Script Loading
 
+    @OnIo
     private suspend fun getScript(): String {
-        return withContext(dispatchers.io()) {
-            cachedScript.takeUnless { it.isNullOrBlank() } ?: loadJs(JS_FILE_NAME)
-                .replace(CONTENT_SCOPE_PLACEHOLDER, getContentScopeJson())
-                .replace(USER_UNPROTECTED_DOMAINS_PLACEHOLDER, "[]")
-                .replace(USER_PREFERENCES_PLACEHOLDER, getUserPreferencesJson())
-                .replace(
-                    MESSAGING_PARAMETERS_PLACEHOLDER,
-                    "${getSecretKeyValuePair()},${getCallbackKeyValuePair()},${getInterfaceKeyValuePair()}",
-                ).also { cachedScript = it }
-        }
+        return cachedScript.takeUnless { it.isNullOrBlank() } ?: loadJs(JS_FILE_NAME)
+            .replace(CONTENT_SCOPE_PLACEHOLDER, getContentScopeJson())
+            .replace(USER_UNPROTECTED_DOMAINS_PLACEHOLDER, "[]")
+            .replace(USER_PREFERENCES_PLACEHOLDER, getUserPreferencesJson())
+            .replace(
+                MESSAGING_PARAMETERS_PLACEHOLDER,
+                "${getSecretKeyValuePair()},${getCallbackKeyValuePair()},${getInterfaceKeyValuePair()}",
+            ).also { cachedScript = it }
     }
 
     @VisibleForTesting

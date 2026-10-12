@@ -17,13 +17,13 @@
 package com.duckduckgo.subscriptions.impl.onboarding.experiment
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.feature.toggles.api.Toggle
 import com.duckduckgo.subscriptions.impl.SubscriptionsFeature
 import com.duckduckgo.subscriptions.impl.SubscriptionsFeature.SubscriptionOnboardingCohorts.TREATMENT
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface SubscriptionOnboardingExperiments {
@@ -44,14 +44,14 @@ class RealSubscriptionOnboardingExperiments @Inject constructor(
     private val dispatcherProvider: DispatcherProvider,
 ) : SubscriptionOnboardingExperiments {
 
+    @OnIo
     override suspend fun enroll(isFreeTrial: Boolean) {
-        withContext(dispatcherProvider.io()) {
-            experimentFor(isFreeTrial).enroll()
-        }
+        experimentFor(isFreeTrial).enroll()
     }
 
-    override suspend fun isTreatment(): Boolean = withContext(dispatcherProvider.io()) {
-        subscriptionsFeature.subscriptionOnboardingFreeTrialsOct2026().isEnrolledAndEnabled(TREATMENT) ||
+    @OnIo
+    override suspend fun isTreatment(): Boolean {
+        return subscriptionsFeature.subscriptionOnboardingFreeTrialsOct2026().isEnrolledAndEnabled(TREATMENT) ||
             subscriptionsFeature.subscriptionOnboardingPaidSubsOct2026().isEnrolledAndEnabled(TREATMENT)
     }
 

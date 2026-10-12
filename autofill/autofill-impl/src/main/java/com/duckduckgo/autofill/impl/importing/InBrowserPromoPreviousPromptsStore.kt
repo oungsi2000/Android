@@ -18,6 +18,7 @@ package com.duckduckgo.autofill.impl.importing
 
 import com.duckduckgo.autofill.impl.urlmatcher.AutofillUrlMatcher
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
@@ -41,11 +42,10 @@ class IntInMemoryInBrowserPromoPreviousPromptsStore @Inject constructor(
 
     private var previousETldPlusOneOffered: String? = null
 
+    @OnIo
     override suspend fun recordPromoDisplayed(originalUrl: String) {
-        withContext(dispatchers.io()) {
-            val eTldPlusOne = urlMatcher.extractUrlPartsForAutofill(originalUrl).eTldPlus1 ?: return@withContext
-            previousETldPlusOneOffered = eTldPlusOne
-        }
+        val eTldPlusOne = urlMatcher.extractUrlPartsForAutofill(originalUrl).eTldPlus1 ?: return
+        previousETldPlusOneOffered = eTldPlusOne
     }
 
     override suspend fun hasPromoBeenDisplayed(originalUrl: String): Boolean {

@@ -19,6 +19,7 @@ package com.duckduckgo.duckchat.impl.history
 import android.content.Context
 import com.duckduckgo.browsermode.api.BrowserMode
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.ActivityScope
 import com.duckduckgo.duckchat.impl.R
 import com.duckduckgo.duckchat.impl.models.ModelDisplay
@@ -31,7 +32,6 @@ import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.time.Instant
 import javax.inject.Inject
@@ -71,38 +71,39 @@ class RealChatHistoryRepository @Inject constructor(
         chatStore.getChatsFlow()
             .map { chats -> chats.map(::toChatHistoryItem) }
 
+    @OnIo
     override suspend fun deleteChat(chatId: String) {
-        withContext(dispatchers.io()) { chatStore.deleteChat(chatId) }
+        chatStore.deleteChat(chatId)
     }
 
+    @OnIo
     override suspend fun deleteAllChats() {
-        withContext(dispatchers.io()) { chatStore.deleteAllChats() }
+        chatStore.deleteAllChats()
     }
 
-    override suspend fun renameChat(chatId: String, newTitle: String): Boolean =
-        withContext(dispatchers.io()) {
-            chatStore.renameChat(chatId, newTitle)
-        }
+    @OnIo
+    override suspend fun renameChat(chatId: String, newTitle: String): Boolean {
+        return chatStore.renameChat(chatId, newTitle)
+    }
 
+    @OnIo
     override suspend fun setPinned(chatId: String, pinned: Boolean) {
-        withContext(dispatchers.io()) {
-            if (pinned) chatStore.pinChat(chatId) else chatStore.unpinChat(chatId)
-            duckChatSyncRepository.recordSingleChatUpdate(chatId, browserMode)
-            syncEngine.triggerSync(SyncEngine.SyncTrigger.DATA_CHANGE)
-        }
+        if (pinned) chatStore.pinChat(chatId) else chatStore.unpinChat(chatId)
+        duckChatSyncRepository.recordSingleChatUpdate(chatId, browserMode)
+        syncEngine.triggerSync(SyncEngine.SyncTrigger.DATA_CHANGE)
     }
 
-    override suspend fun exportChat(chatId: String, modelDisplay: ModelDisplay?): File =
-        withContext(dispatchers.io()) {
-            chatExportWriter.write(buildPayload(chatId, modelDisplay))
-        }
+    @OnIo
+    override suspend fun exportChat(chatId: String, modelDisplay: ModelDisplay?): File {
+        return chatExportWriter.write(buildPayload(chatId, modelDisplay))
+    }
 
-    override suspend fun exportChats(requests: List<ChatExportRequest>): List<File> =
-        withContext(dispatchers.io()) {
-            // Build every payload up front so a missing chat/content/image aborts before any file is written.
-            val payloads = requests.map { buildPayload(it.chatId, it.modelDisplay) }
-            payloads.map { chatExportWriter.write(it) }
-        }
+    @OnIo
+    override suspend fun exportChats(requests: List<ChatExportRequest>): List<File> {
+        // Build every payload up front so a missing chat/content/image aborts before any file is written.
+        val payloads = requests.map { buildPayload(it.chatId, it.modelDisplay) }
+        return payloads.map { chatExportWriter.write(it) }
+    }
 
     private suspend fun buildPayload(chatId: String, modelDisplay: ModelDisplay?): ExportPayload {
         val chat = chatStore.getChatById(chatId)

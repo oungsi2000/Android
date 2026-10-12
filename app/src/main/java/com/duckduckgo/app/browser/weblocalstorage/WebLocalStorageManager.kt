@@ -20,6 +20,7 @@ import android.content.Context
 import com.duckduckgo.app.fire.fireproofwebsite.data.FireproofWebsiteRepository
 import com.duckduckgo.browser.feature.toggles.AndroidBrowserConfigFeature
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import com.squareup.anvil.annotations.ContributesTo
@@ -27,7 +28,6 @@ import dagger.Lazy
 import dagger.Module
 import dagger.Provides
 import dagger.SingleInstanceIn
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import org.iq80.leveldb.DB
 import org.iq80.leveldb.Options
@@ -53,38 +53,37 @@ class DuckDuckGoWebLocalStorageManager @Inject constructor(
     private val dispatcherProvider: DispatcherProvider,
 ) : WebLocalStorageManager {
 
+    @OnIo
     override suspend fun clearWebLocalStorage() {
-        withContext(dispatcherProvider.io()) {
-            val settings = androidBrowserConfigFeature.webLocalStorage().getSettings()
-            val webLocalStorageSettings = webLocalStorageSettingsJsonParser.parseJson(settings)
+        val settings = androidBrowserConfigFeature.webLocalStorage().getSettings()
+        val webLocalStorageSettings = webLocalStorageSettingsJsonParser.parseJson(settings)
 
-            val fireproofedDomains = fireproofWebsiteRepository.fireproofWebsitesSync().map { it.domain }
+        val fireproofedDomains = fireproofWebsiteRepository.fireproofWebsitesSync().map { it.domain }
 
-            val domains = webLocalStorageSettings.domains.list + fireproofedDomains
-            val matchingRegex = webLocalStorageSettings.matchingRegex.list
+        val domains = webLocalStorageSettings.domains.list + fireproofedDomains
+        val matchingRegex = webLocalStorageSettings.matchingRegex.list
 
-            logcat { "WebLocalStorageManager: Allowed domains: $domains" }
-            logcat { "WebLocalStorageManager: Matching regex: $matchingRegex" }
+        logcat { "WebLocalStorageManager: Allowed domains: $domains" }
+        logcat { "WebLocalStorageManager: Matching regex: $matchingRegex" }
 
-            val db = databaseProvider.get()
-            db.iterator().use { iterator ->
-                iterator.seekToFirst()
+        val db = databaseProvider.get()
+        db.iterator().use { iterator ->
+            iterator.seekToFirst()
 
-                while (iterator.hasNext()) {
-                    val entry = iterator.next()
-                    val key = String(entry.key, StandardCharsets.UTF_8)
+            while (iterator.hasNext()) {
+                val entry = iterator.next()
+                val key = String(entry.key, StandardCharsets.UTF_8)
 
-                    val domainForMatchingAllowedKey =
-                        getDomainForMatchingAllowedKey(key, domains, matchingRegex)
-                    if (domainForMatchingAllowedKey == null) {
-                        db.delete(entry.key)
-                        logcat { "WebLocalStorageManager: Deleted key: $key" }
-                    }
+                val domainForMatchingAllowedKey =
+                    getDomainForMatchingAllowedKey(key, domains, matchingRegex)
+                if (domainForMatchingAllowedKey == null) {
+                    db.delete(entry.key)
+                    logcat { "WebLocalStorageManager: Deleted key: $key" }
                 }
             }
-
-            logcat { "WebLocalStorageManager: finished deleting local storage data" }
         }
+
+        logcat { "WebLocalStorageManager: finished deleting local storage data" }
     }
 
     private fun getDomainForMatchingAllowedKey(

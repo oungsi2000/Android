@@ -17,6 +17,7 @@
 package com.duckduckgo.pir.impl.common
 
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.pir.impl.common.EmailDataResolver.EmailDataResolverResult
 import com.duckduckgo.pir.impl.common.EmailDataResolver.EmailDataResolverResult.Failure
@@ -29,7 +30,6 @@ import com.duckduckgo.pir.impl.service.ResponseError
 import com.duckduckgo.pir.impl.service.parseError
 import com.squareup.anvil.annotations.ContributesBinding
 import com.squareup.moshi.Moshi
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import retrofit2.HttpException
 import javax.inject.Inject
@@ -70,11 +70,12 @@ class RealEmailDataResolver @Inject constructor(
 ) : EmailDataResolver {
     private val adapter = moshi.adapter(ResponseError::class.java)
 
+    @OnIo
     override suspend fun poll(
         emailAddress: String,
         attemptId: String,
-    ): EmailDataResolverResult = withContext(dispatcherProvider.io()) {
-        runCatching {
+    ): EmailDataResolverResult {
+        return runCatching {
             dbpService.getEmailConfirmationLinkStatus(
                 PirEmailConfirmationDataRequest(
                     items = listOf(

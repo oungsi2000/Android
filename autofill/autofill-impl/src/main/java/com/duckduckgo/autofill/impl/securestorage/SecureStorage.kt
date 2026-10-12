@@ -21,6 +21,7 @@ import com.duckduckgo.autofill.impl.securestorage.encryption.EncryptionHelper.En
 import com.duckduckgo.autofill.store.SecureStorageRepository
 import com.duckduckgo.autofill.store.db.WebsiteLoginCredentialsEntity
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesBinding
 import dagger.SingleInstanceIn
@@ -32,7 +33,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /** Public API for the secure storage feature */
@@ -183,112 +183,100 @@ class RealSecureStorage @Inject constructor(
         return secureStorageRepository.await() != null
     }
 
+    @OnIo
     override suspend fun addWebsiteLoginDetailsWithCredentials(
         websiteLoginDetailsWithCredentials: WebsiteLoginDetailsWithCredentials,
     ): WebsiteLoginDetailsWithCredentials? {
-        return withContext(dispatchers.io()) {
-            val savedCredential = secureStorageRepository.await()?.addWebsiteLoginCredential(websiteLoginDetailsWithCredentials.toDataEntity())
-            return@withContext savedCredential?.toCredentials()
-        }
+        val savedCredential = secureStorageRepository.await()?.addWebsiteLoginCredential(websiteLoginDetailsWithCredentials.toDataEntity())
+        return savedCredential?.toCredentials()
     }
 
     @Throws(SecureStorageException::class)
+    @OnIo
     override suspend fun addWebsiteLoginDetailsWithCredentials(credentials: List<WebsiteLoginDetailsWithCredentials>): List<Long> {
-        return withContext(dispatchers.io()) {
-            secureStorageRepository.await()?.addWebsiteLoginCredentials(credentials.map { it.toDataEntity() }) ?: emptyList()
-        }
+        return secureStorageRepository.await()?.addWebsiteLoginCredentials(credentials.map { it.toDataEntity() }) ?: emptyList()
     }
 
+    @OnIo
     override suspend fun websiteLoginDetailsForDomain(domain: String): Flow<List<WebsiteLoginDetails>> {
-        return withContext(dispatchers.io()) {
-            val repo = secureStorageRepository.await() ?: return@withContext emptyFlow()
-            repo.websiteLoginCredentialsForDomain(domain).map { list ->
-                list.map {
-                    it.toDetails()
-                }
+        val repo = secureStorageRepository.await() ?: return emptyFlow()
+        return repo.websiteLoginCredentialsForDomain(domain).map { list ->
+            list.map {
+                it.toDetails()
             }
         }
     }
 
+    @OnIo
     override suspend fun websiteLoginDetails(): Flow<List<WebsiteLoginDetails>> {
-        return withContext(dispatchers.io()) {
-            val repo = secureStorageRepository.await() ?: return@withContext emptyFlow()
-            repo.websiteLoginCredentials().map { list ->
-                list.map {
-                    it.toDetails()
-                }
+        val repo = secureStorageRepository.await() ?: return emptyFlow()
+        return repo.websiteLoginCredentials().map { list ->
+            list.map {
+                it.toDetails()
             }
         }
     }
 
+    @OnIo
     override suspend fun getWebsiteLoginDetailsWithCredentials(id: Long): WebsiteLoginDetailsWithCredentials? {
-        return withContext(dispatchers.io()) {
-            secureStorageRepository.await()?.getWebsiteLoginCredentialsForId(id)?.toCredentials()
-        }
+        return secureStorageRepository.await()?.getWebsiteLoginCredentialsForId(id)?.toCredentials()
     }
 
+    @OnIo
     override suspend fun websiteLoginDetailsWithCredentialsForDomain(domain: String): Flow<List<WebsiteLoginDetailsWithCredentials>> {
-        return withContext(dispatchers.io()) {
-            val repo = secureStorageRepository.await() ?: return@withContext flowOf(emptyList())
-            repo.websiteLoginCredentialsForDomain(domain).map { list ->
-                list.map {
-                    it.toCredentials()
-                }
+        val repo = secureStorageRepository.await() ?: return flowOf(emptyList())
+        return repo.websiteLoginCredentialsForDomain(domain).map { list ->
+            list.map {
+                it.toCredentials()
             }
         }
     }
 
+    @OnIo
     override suspend fun websiteLoginDetailsWithCredentials(): Flow<List<WebsiteLoginDetailsWithCredentials>> {
-        return withContext(dispatchers.io()) {
-            val repo = secureStorageRepository.await() ?: return@withContext flowOf(emptyList())
-            repo.websiteLoginCredentials().map { list ->
-                list.map {
-                    it.toCredentials()
-                }
+        val repo = secureStorageRepository.await() ?: return flowOf(emptyList())
+        return repo.websiteLoginCredentials().map { list ->
+            list.map {
+                it.toCredentials()
             }
         }
     }
 
+    @OnIo
     override suspend fun updateWebsiteLoginDetailsWithCredentials(
         websiteLoginDetailsWithCredentials: WebsiteLoginDetailsWithCredentials,
-    ): WebsiteLoginDetailsWithCredentials? =
-        withContext(dispatchers.io()) {
-            secureStorageRepository.await()?.updateWebsiteLoginCredentials(websiteLoginDetailsWithCredentials.toDataEntity())?.toCredentials()
-        }
+    ): WebsiteLoginDetailsWithCredentials? {
+        return secureStorageRepository.await()?.updateWebsiteLoginCredentials(websiteLoginDetailsWithCredentials.toDataEntity())?.toCredentials()
+    }
 
-    override suspend fun deleteWebsiteLoginDetailsWithCredentials(id: Long): Unit =
-        withContext(dispatchers.io()) {
-            secureStorageRepository.await()?.deleteWebsiteLoginCredentials(id)
-        }
+    @OnIo
+    override suspend fun deleteWebsiteLoginDetailsWithCredentials(id: Long) {
+        secureStorageRepository.await()?.deleteWebsiteLoginCredentials(id)
+    }
 
+    @OnIo
     override suspend fun deleteWebSiteLoginDetailsWithCredentials(ids: List<Long>) {
-        return withContext(dispatchers.io()) {
-            secureStorageRepository.await()?.deleteWebsiteLoginCredentials(ids)
-        }
+        secureStorageRepository.await()?.deleteWebsiteLoginCredentials(ids)
     }
 
+    @OnIo
     override suspend fun addToNeverSaveList(domain: String) {
-        withContext(dispatchers.io()) {
-            secureStorageRepository.await()?.addToNeverSaveList(domain)
-        }
+        secureStorageRepository.await()?.addToNeverSaveList(domain)
     }
 
+    @OnIo
     override suspend fun clearNeverSaveList() {
-        withContext(dispatchers.io()) {
-            secureStorageRepository.await()?.clearNeverSaveList()
-        }
+        secureStorageRepository.await()?.clearNeverSaveList()
     }
 
+    @OnIo
     override suspend fun neverSaveListCount(): Flow<Int> {
-        return withContext(dispatchers.io()) {
-            secureStorageRepository.await()?.neverSaveListCount() ?: flowOf(0)
-        }
+        return secureStorageRepository.await()?.neverSaveListCount() ?: flowOf(0)
     }
 
+    @OnIo
     override suspend fun isInNeverSaveList(domain: String): Boolean {
-        return withContext(dispatchers.io()) {
-            secureStorageRepository.await()?.isInNeverSaveList(domain) ?: false
-        }
+        return secureStorageRepository.await()?.isInNeverSaveList(domain) ?: false
     }
 
     private suspend fun WebsiteLoginDetailsWithCredentials.toDataEntity(): WebsiteLoginCredentialsEntity {

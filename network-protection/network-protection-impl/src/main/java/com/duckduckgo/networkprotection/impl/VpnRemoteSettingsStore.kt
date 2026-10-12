@@ -16,6 +16,7 @@
 
 package com.duckduckgo.networkprotection.impl
 
+import com.duckduckgo.common.utils.LogFailure
 import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.common.utils.DispatcherProvider
 import com.duckduckgo.di.scopes.AppScope
@@ -59,9 +60,7 @@ class VpnRemoteSettingsStore @Inject constructor(
                     networkProtectionState.restart()
                 }
             }
-        }.onFailure {
-            logcat(WARN) { it.asLog() }
-        }
+        }.onFailure @LogFailure(priority = WARN) {}
     }
 
     private data class AutoExcludeModel(

@@ -30,6 +30,7 @@ import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
 import com.duckduckgo.app.statistics.wideevents.db.WideEventRepository
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.squareup.anvil.annotations.ContributesMultibinding
 import kotlinx.coroutines.CoroutineScope
@@ -38,7 +39,6 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import logcat.logcat
 import javax.inject.Inject
 import kotlin.collections.chunked
@@ -91,10 +91,10 @@ class CompletedWideEventsProcessor @Inject constructor(
         }
     }
 
-    private suspend fun isFeatureEnabled(): Boolean =
-        withContext(dispatcherProvider.io()) {
-            wideEventFeature.self().isEnabled()
-        }
+    @OnIo
+    private suspend fun isFeatureEnabled(): Boolean {
+        return wideEventFeature.self().isEnabled()
+    }
 
     private fun scheduleRetry() {
         workManager.enqueueUniqueWork(

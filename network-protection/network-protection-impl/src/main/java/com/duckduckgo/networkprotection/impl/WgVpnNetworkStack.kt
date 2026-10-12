@@ -16,6 +16,7 @@
 
 package com.duckduckgo.networkprotection.impl
 
+import com.duckduckgo.common.utils.LogFailure
 import android.os.ParcelFileDescriptor
 import com.duckduckgo.anrs.api.CrashLogger
 import com.duckduckgo.anrs.api.CrashLogger.Crash
@@ -156,9 +157,7 @@ class WgVpnNetworkStack @Inject constructor(
         logcat { "Started turnOffNative" }
         kotlin.runCatching {
             wgProtocol.get().stopWg()
-        }.onFailure {
-            logcat(ERROR) { "WG network: ${it.asLog()}" }
-        }
+        }.onFailure @LogFailure("WG network: ", priority = ERROR) {}
         logcat { "Completed turnOffNative" }
 
         if (reason != RESTART) {

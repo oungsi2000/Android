@@ -18,6 +18,7 @@ package com.duckduckgo.networkprotection.impl.state
 
 import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.OnIo
 import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.mobile.android.vpn.VpnFeaturesRegistry
 import com.duckduckgo.mobile.android.vpn.state.VpnStateMonitor
@@ -39,7 +40,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @ContributesBinding(AppScope::class)
@@ -52,8 +52,9 @@ class NetworkProtectionStateImpl @Inject constructor(
     private val vpnStateMonitor: VpnStateMonitor,
     private val netPExclusionListRepository: NetPExclusionListRepository,
 ) : NetworkProtectionState {
-    override suspend fun isOnboarded(): Boolean = withContext(dispatcherProvider.io()) {
-        return@withContext cohortStore.cohortLocalDate != null
+    @OnIo
+    override suspend fun isOnboarded(): Boolean {
+        return cohortStore.cohortLocalDate != null
     }
 
     override suspend fun isEnabled(): Boolean {
@@ -108,7 +109,8 @@ class NetworkProtectionStateImpl @Inject constructor(
         }
     }
 
-    override suspend fun getExcludedApps(): List<String> = withContext(dispatcherProvider.io()) {
-        netPExclusionListRepository.getExcludedAppPackages()
+    @OnIo
+    override suspend fun getExcludedApps(): List<String> {
+        return netPExclusionListRepository.getExcludedAppPackages()
     }
 }
